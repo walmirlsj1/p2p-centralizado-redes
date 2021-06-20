@@ -1,8 +1,15 @@
-package base;
-import java.io.*;
+package old;
 import java.net.*;
 
 class UDPServer {
+    /**
+     * UDP utiliza DatagramSocket
+     *
+     * O UDP não tem conexão e envia pacotes de dados independentes
+     * de um sistema final para outro, sem nenhuma garantia de entrega.
+     *
+     */
+
     public static void main(String args[]) throws Exception
     {
 
