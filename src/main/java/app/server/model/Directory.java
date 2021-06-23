@@ -1,4 +1,4 @@
-package app.base;
+package app.server.model;
 
 import lombok.Getter;
 import lombok.Setter;

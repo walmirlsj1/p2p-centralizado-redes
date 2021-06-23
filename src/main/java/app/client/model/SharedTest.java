@@ -1,6 +1,6 @@
-package app.base;
+package app.client.model;
 
-import app.FileManager;
+import app.base.FileManager;
 
 import java.io.BufferedReader;
 import java.io.IOException;

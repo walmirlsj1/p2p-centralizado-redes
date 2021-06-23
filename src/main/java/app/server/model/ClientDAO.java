@@ -1,14 +1,16 @@
-package app.base;
+package app.server.model;
+
+import app.base.SQLiteJDBCDriverConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class clientDAO {
+public class ClientDAO {
     Connection con;
     private boolean debug = false;
 
-    public clientDAO() {
+    public ClientDAO() {
         this.con = SQLiteJDBCDriverConnection.getConnection();
     }
 
@@ -28,9 +30,8 @@ public class clientDAO {
             return client;
         } catch (SQLException e) {
             System.out.println("Method insert error: " + e.getMessage());
-            return null;
         }
-
+        return null;
     }
 
     private Long getLastId() throws SQLException {
@@ -47,6 +48,21 @@ public class clientDAO {
         return stmt.execute("DELETE FROM CLIENT WHERE ID=" + id);
     }
 
+    public Client findById(Long id) {
+        String sql = "select * from CLIENT WHERE ID=" + id;
+
+        try {
+            PreparedStatement query = con.prepareStatement(sql);
+            ResultSet resultSet = query.executeQuery();
+
+            if (resultSet.first())
+                return resultSetToClient(resultSet);
+        } catch (SQLException e) {
+            System.out.println("findById: " + e.getMessage());
+        }
+        return null;
+    }
+
     public List<Client> findAll() throws SQLException {
         PreparedStatement query = con.prepareStatement("select * from CLIENT");
         ResultSet resultSet = query.executeQuery();
@@ -54,7 +70,7 @@ public class clientDAO {
         return convertListClient(resultSet);
     }
 
-    private List<Client> convertListClient(ResultSet resultSet) throws SQLException {
+    public List<Client> convertListClient(ResultSet resultSet) throws SQLException {
         ArrayList<Client> list = new ArrayList<>();
         Client client;
 

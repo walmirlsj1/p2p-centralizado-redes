@@ -1,4 +1,6 @@
-package app.base;
+package app.client.model;
+
+import app.base.SQLiteJDBCDriverConnection;
 
 import java.sql.*;
 import java.util.ArrayList;

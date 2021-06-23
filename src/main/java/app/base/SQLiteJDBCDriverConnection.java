@@ -1,8 +1,5 @@
 package app.base;
 
-import app.FileManager;
-import org.apache.commons.configuration2.ex.ConfigurationException;
-
 import java.io.File;
 import java.io.IOException;
 import java.sql.*;
@@ -41,24 +38,75 @@ public class SQLiteJDBCDriverConnection {
         Connection con = SQLiteJDBCDriverConnection.getConnection();
         Statement stmt = con.createStatement();
 
-        stmt.execute("CREATE TABLE IF NOT EXISTS SHARED(ID INTEGER AUTO_INCREMENT, TITLE VARCHAR(80), SHARED_PATH VARCHAR(255), SIZE_PATH INTEGER)");
+        System.out.println("******************** CREATE TABLE SHARED ********************");
+        stmt.execute("CREATE TABLE IF NOT EXISTS SHARED (" +
+                "ID INTEGER AUTO_INCREMENT, " +
+                "TITLE VARCHAR(80), " +
+                "SHARED_PATH VARCHAR(255), " +
+                "SIZE_PATH INTEGER" +
+                ")"
+        );
+
+        System.out.println("******************** CREATE TABLE DIRECTORY ********************");
         stmt.execute("" +
-                "CREATE TABLE Client \n" +
-                "   (candy_num INT, \n" +
-                "    candy_flavor CHAR(20),\n" +
-                "    FOREIGN KEY (candy_num) REFERENCES all_candy\n" +
-                "    ON DELETE CASCADE" +
-                "")
+                "CREATE TABLE IF NOT EXISTS DIRECTORY (" +
+                " ID INTEGER AUTO_INCREMENT, " +
+                " TITLE VARCHAR(80), " +
+                " SHARED_PATH VARCHAR(255), " +
+                " SIZE_PATH INTEGER" +
+                ")"
+        );
+//                " FOREIGN KEY (candy_num) REFERENCES all_candy\n" +
+//                "    ON DELETE CASCADE " +
+
+        System.out.println("******************** CREATE TABLE CLIENT ********************");
+        stmt.execute("" +
+                "CREATE TABLE IF NOT EXISTS CLIENT (" +
+                " ID INTEGER AUTO_INCREMENT, " +
+                " ADDRESS VARCHAR(21)" +
+                ")"
+        );
+
+        System.out.println("******************** CREATE TABLE CLIENT_DIRECTORY ********************");
+        stmt.execute("" +
+                "CREATE TABLE IF NOT EXISTS CLIENT_DIRECTORY (" +
+                " ID INTEGER AUTO_INCREMENT, " +
+                " CLIENT_ID INTEGER NOT_NUL, " +
+                " DIRECTORY_ID INTEGER NOT_NUL, " +
+                " FOREIGN KEY (CLIENT_ID) REFERENCES CLIENT (ID)" +
+                "    ON DELETE CASCADE, " +
+                " FOREIGN KEY (DIRECTORY_ID) REFERENCES DIRECTORY (ID)" +
+                "    ON DELETE CASCADE " +
+                ")"
+        );
+
+        /**
+         * +
+         *                 " FOREIGN KEY (candy_num) REFERENCES all_candy\n" +
+         *                 "    ON DELETE CASCADE" +
+         */
         stmt.execute("CREATE TABLE IF NOT EXISTS CLIENT(USER_ID VARCHAR(255), LAST_UPDATE DATETIME)");
 
         stmt.execute("DELETE FROM SHARED"); //LIMPA ANTERIOR PARA FINS DE TESTE
 
-        stmt.execute("" +
-                "INSERT INTO SHARED( ID, TITLE, SHARED_PATH, SIZE_PATH ) VALUES " +
-                "(1, 'TESTE', 'DIRETORIO', 0)," +
-                "(2, 'TESTE2', 'DIRETORIO2', 0)"
-        );
+        String sqlA0 ="INSERT INTO CLIENT(ID, ADDRESS) VALUES (1, 'CLIENTE-PC'), (2, 'GHOST-PC');";
+        String sqlA1 = "INSERT INTO DIRECTORY( ID, TITLE, SHARED_PATH, SIZE_PATH ) VALUES " +
+                "(1, 'TESTE', 'DIRETORIO', 0), (2, 'TESTE2', 'DIRETORIO2', 0);";
+        String sqlB = "INSERT INTO CLIENT_DIRECTORY (ID, CLIENT_ID, DIRECTORY_ID) VALUES (0,1,2)";
+        String sqlB1 = "INSERT INTO CLIENT_DIRECTORY (ID, CLIENT_ID, DIRECTORY_ID) VALUES (0,2,2);";
+        String sqlB2 = "INSERT INTO CLIENT_DIRECTORY (ID, CLIENT_ID, DIRECTORY_ID) VALUES (0,1,1);";
+        stmt.execute(sqlA0);
+        stmt.execute(sqlA1);
+        stmt.execute(sqlB);
+        stmt.execute(sqlB1);
+        stmt.execute(sqlB2);
 
+//        stmt.execute("" +
+//                "INSERT INTO SHARED( ID, TITLE, SHARED_PATH, SIZE_PATH ) VALUES " +
+//                "(1, 'TESTE', 'DIRETORIO', 0)," +
+//                "(2, 'TESTE2', 'DIRETORIO2', 0)"
+//        );
+//        stmt.execute(
 
         System.out.println("--------------------- Select ---------------------");
         PreparedStatement query = con.prepareStatement("select * from SHARED");

@@ -1,14 +1,14 @@
-package app;
+package app.client;
 
-import app.base.SharedDAO;
+import app.base.FileManager;
+import app.client.model.SharedDAO;
 import app.config.Config;
-import app.base.Shared;
+import app.client.model.Shared;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -174,7 +174,7 @@ public class TCPClienteServidor {
 
             Long size = FileManager.getSizeFolder(diretorio);
 
-            Shared shared = new Shared(title, diretorio, size);
+            Shared shared = new Shared(0L, title, diretorio, size);
             SharedDAO dao = new SharedDAO();
 
             return dao.insert(shared);
