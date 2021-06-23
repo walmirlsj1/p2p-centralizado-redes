@@ -137,6 +137,7 @@ public class ServidorDiretorio {
             case 'n': // cliente não responde a solicitação
                 System.out.println("New seek serverClient offline");
 
+                /* @TODO falta implementar */
 
                 break;
             case 'r':
@@ -161,7 +162,7 @@ public class ServidorDiretorio {
                 break;
             case 'l':
                 System.out.println("List all share or contains key");
-                // futuro
+                /* @TODO falta implementar */
             default:
                 throw new IOException("Operation not found!");
         }
