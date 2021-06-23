@@ -175,4 +175,18 @@ public class DirectoryDAO {
         return new ArrayList<>();
     }
 
+    public Boolean deleteAllDirectoryByClient(Client client) {
+        String sql = "DELETE FROM CLIENT_DIRECTORY AS CD WHERE CD.CLIENT_ID=%d;";
+        sql = String.format(sql, client.getId());
+
+        try {
+            PreparedStatement query = con.prepareStatement(sql);
+            ResultSet resultSet = query.executeQuery();
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("deleteAllDirectoryByClient " + e.getMessage());
+        }
+        return false;
+    }
 }

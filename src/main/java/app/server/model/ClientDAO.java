@@ -43,9 +43,14 @@ public class ClientDAO {
     }
 
 
-    public boolean delete(int id) throws SQLException {
-        Statement stmt = con.createStatement();
-        return stmt.execute("DELETE FROM CLIENT WHERE ID=" + id);
+    public boolean delete(Long id) {
+        try {
+            Statement stmt = con.createStatement();
+            return stmt.execute("DELETE FROM CLIENT WHERE ID=" + id);
+        } catch (SQLException e) {
+            System.out.println("delete" + e.getMessage());
+        }
+        return false;
     }
 
     public Client findById(Long id) {
@@ -88,4 +93,18 @@ public class ClientDAO {
         return new Client(id, address);
     }
 
+    public Client findByAddress(String address) {
+        String sql = "select * from CLIENT WHERE ADDRESS=" + address;
+
+        try {
+            PreparedStatement query = con.prepareStatement(sql);
+            ResultSet resultSet = query.executeQuery();
+
+            if (resultSet.first())
+                return resultSetToClient(resultSet);
+        } catch (SQLException e) {
+            System.out.println("findById: " + e.getMessage());
+        }
+        return null;
+    }
 }

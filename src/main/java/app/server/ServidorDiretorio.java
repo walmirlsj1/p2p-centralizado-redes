@@ -136,9 +136,12 @@ public class ServidorDiretorio {
                 break;
             case 'n': // cliente não responde a solicitação
                 System.out.println("New seek serverClient offline");
+
+
+                break;
             case 'r':
                 System.out.println("Register shareds in server");
-
+                messageReply = "OK";
                 operation = register(new String(data)) ? 'o' : 'f';
 
                 if (operation == 'e') messageReply = "Failed process request";
@@ -147,13 +150,18 @@ public class ServidorDiretorio {
             case 'a':
                 System.out.println("Apply in server");
                 //apply generate cliente_id
+                messageReply = apply(new String(data));
+                operationReply = 'o';
                 break;
             case 'd':
                 System.out.println("Disconnect from server");
+                messageReply = disconnect(new String(data));
+                operationReply = 'o';
                 //delete from client_id
                 break;
             case 'l':
                 System.out.println("List all share or contains key");
+                // futuro
             default:
                 throw new IOException("Operation not found!");
         }
@@ -168,6 +176,30 @@ public class ServidorDiretorio {
         envia.writeBytes(messageReply);
 
 //        return reply;
+    }
+
+    private String disconnect(String s) {
+        ClientDAO clientDAO = new ClientDAO();
+
+        Client client = clientDAO.findById(Long.valueOf(s));
+        DirectoryDAO directoryDAO = new DirectoryDAO();
+
+        directoryDAO.deleteAllDirectoryByClient(client);
+
+        clientDAO.delete(client.getId());
+        return "OK";
+    }
+
+    private String apply(String s) {  // s = meuIP:porta
+        ClientDAO clientDAO = new ClientDAO();
+        Client client = clientDAO.findByAddress(s);
+
+        if (client == null) {
+            client.setAddress(s);
+            client = clientDAO.insert(client);
+        }
+
+        return String.valueOf(client.getId());
     }
 
     private String seek(String text_id) {
