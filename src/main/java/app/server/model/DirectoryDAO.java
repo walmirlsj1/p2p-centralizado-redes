@@ -16,8 +16,8 @@ public class DirectoryDAO {
 
     public Directory insert(Directory directory) {
         String sql_insert = String.format(
-                "INSERT INTO DIRECTORY(ID, TITLE, SIZE_PATH) VALUES (%d, '%s', %d)",
-                directory.getId(), directory.getTitle(), directory.getSize()
+                "INSERT INTO DIRECTORY(TITLE, SIZE_PATH) VALUES ('%s', %d)",
+                directory.getTitle(), directory.getSize()
         );
         Statement stmt;
         try {
@@ -29,7 +29,7 @@ public class DirectoryDAO {
             System.out.println(directory.toString());
             return directory;
         } catch (SQLException e) {
-            System.out.println("Method insert error: " + e.getMessage());
+            System.out.println("Error insert: " + e.getMessage());
         }
         return null;
     }
@@ -58,42 +58,46 @@ public class DirectoryDAO {
     }
 
     public Directory findById(long id) {
-        String querySql = String.format("select * from DIRECTORY WHERE ID=%d", id);
+        String querySql = String.format("SELECT * FROM DIRECTORY WHERE ID=%d", id);
         try {
             PreparedStatement query = con.prepareStatement(querySql);
             ResultSet resultSet = query.executeQuery();
 
-            if (resultSet.first())
+            if (resultSet.next())
                 return resultSetToDirectory(resultSet);
         } catch (SQLException e) {
-            System.out.println("findById: " + e.getMessage());
+            System.out.println("Error findById: " + e.getMessage());
         }
         return null;
     }
 
     public Directory findByTitle(String title) {
 
-        String sql = String.format("select * from DIRECTORY WHERE TITLE='%s'", title);
+        String sql = String.format("SELECT * FROM DIRECTORY WHERE TITLE='%s'", title);
         try {
             PreparedStatement query = con.prepareStatement(sql);
             ResultSet resultSet = query.executeQuery();
 
-            if (resultSet.first())
+            if (resultSet.next())
                 return resultSetToDirectory(resultSet);
         } catch (SQLException e) {
-            System.out.println("findByTitle: " + e.getMessage());
+            System.out.println("Error findByTitle: " + e.getMessage());
         }
         return null;
     }
 
     public List<Directory> findAll() throws SQLException {
-        return find("select * from DIRECTORY");
+        return find("SELECT * FROM DIRECTORY");
     }
 
-    public List<Directory> findAllContainsTitle(String title) throws SQLException {
-        return find("select * from DIRECTORY " +
-                "WHERE TITLE LIKE '%" + title + "%'"
-        );
+    public List<Directory> findAllContainsTitle(String title) {
+        try {
+            String sql = String.format("SELECT * FROM DIRECTORY WHERE TITLE LIKE '%%%s%%'", title);
+            return find(sql);
+        } catch (SQLException e) {
+            System.out.println("Error findAllContainsTitle: " + e.getMessage());
+        }
+        return null;
     }
 
     private List<Directory> find(String sql) throws SQLException {
@@ -124,8 +128,8 @@ public class DirectoryDAO {
 
     public Boolean insertClientDirectory(Directory directory, Client client) {
         String sql_insert = String.format(
-                "INSERT INTO CLIENT_DIRECTORY(ID, CLIENT_ID, DIRECTORY_ID) VALUES (%d, '%d', %d)",
-                0L, client.getId(), directory.getId()
+                "INSERT INTO CLIENT_DIRECTORY(CLIENT_ID, DIRECTORY_ID) VALUES ('%d', %d);",
+                client.getId(), directory.getId()
         );
         Statement stmt;
         try {
@@ -137,7 +141,7 @@ public class DirectoryDAO {
             System.out.println(directory.toString());
             return true;
         } catch (SQLException e) {
-            System.out.println("Method insert error: " + e.getMessage());
+            System.out.println("Error insert: " + e.getMessage());
         }
         return false;
     }
@@ -153,7 +157,7 @@ public class DirectoryDAO {
 
             return clientDAO.convertListClient(resultSet);
         } catch (SQLException e) {
-            System.out.println("findAllClientsByDirectory: " + e.getMessage());
+            System.out.println("Error findAllClientsByDirectory: " + e.getMessage());
         }
         return new ArrayList<>();
     }
@@ -170,7 +174,7 @@ public class DirectoryDAO {
 
             return convertListDirectory(resultSet);
         } catch (SQLException e) {
-            System.out.println("getAllDirectoryByClient " + e.getMessage());
+            System.out.println("Error getAllDirectoryByClient: " + e.getMessage());
         }
         return new ArrayList<>();
     }
@@ -185,7 +189,7 @@ public class DirectoryDAO {
 
             return true;
         } catch (SQLException e) {
-            System.out.println("deleteAllDirectoryByClient " + e.getMessage());
+            System.out.println("Error deleteAllDirectoryByClient: " + e.getMessage());
         }
         return false;
     }

@@ -18,8 +18,8 @@ public class SharedDAO {
         try {
             Statement stmt = con.createStatement();
             String sql_insert = String.format(
-                    "INSERT INTO SHARED( ID, TITLE, SHARED_PATH, SIZE_PATH) VALUES (%d, '%s', '%s', %d)",
-                    shared.getId(), shared.getTitle(), shared.getPath(), shared.getSize()
+                    "INSERT INTO SHARED(TITLE, SHARED_PATH, SIZE_PATH) VALUES ('%s', '%s', %d)",
+                    shared.getTitle(), shared.getPath(), shared.getSize()
             );
 
             stmt.execute(sql_insert);
@@ -28,7 +28,7 @@ public class SharedDAO {
             System.out.println(shared.toString());
             return shared;
         } catch (SQLException e) {
-            System.out.println("Method insert error: " + e.getMessage());
+            System.out.println("Error insert: " + e.getMessage());
             return null;
         }
     }
@@ -47,15 +47,20 @@ public class SharedDAO {
         PreparedStatement query = con.prepareStatement(querySql);
         ResultSet resultSet = query.executeQuery();
 
-        if (resultSet.first())
+        if (resultSet.next())
             return resultSetToShared(resultSet);
 
         return null;
     }
 
-    public boolean delete(int id) throws SQLException {
-        Statement stmt = con.createStatement();
-        return stmt.execute("DELETE FROM SHARED WHERE ID=" + id);
+    public boolean delete(Long id) {
+        try {
+            Statement stmt = con.createStatement();
+            return stmt.execute("DELETE FROM SHARED WHERE ID=" + id);
+        } catch (SQLException e) {
+            System.out.println("Error delete: " + e.getMessage());
+        }
+        return false;
     }
 
     public void deleteAll() throws SQLException {

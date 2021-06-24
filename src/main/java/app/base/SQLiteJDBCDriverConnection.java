@@ -40,17 +40,17 @@ public class SQLiteJDBCDriverConnection {
 
         System.out.println("******************** CREATE TABLE SHARED ********************");
         stmt.execute("CREATE TABLE IF NOT EXISTS SHARED (" +
-                "ID INTEGER AUTO_INCREMENT, " +
-                "TITLE VARCHAR(80), " +
-                "SHARED_PATH VARCHAR(255), " +
-                "SIZE_PATH INTEGER" +
+                " ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                " TITLE VARCHAR(80), " +
+                " SHARED_PATH VARCHAR(255), " +
+                " SIZE_PATH INTEGER" +
                 ")"
         );
 
         System.out.println("******************** CREATE TABLE DIRECTORY ********************");
         stmt.execute("" +
                 "CREATE TABLE IF NOT EXISTS DIRECTORY (" +
-                " ID INTEGER AUTO_INCREMENT, " +
+                " ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 " TITLE VARCHAR(80), " +
                 " SHARED_PATH VARCHAR(255), " +
                 " SIZE_PATH INTEGER" +
@@ -62,7 +62,7 @@ public class SQLiteJDBCDriverConnection {
         System.out.println("******************** CREATE TABLE CLIENT ********************");
         stmt.execute("" +
                 "CREATE TABLE IF NOT EXISTS CLIENT (" +
-                " ID INTEGER AUTO_INCREMENT, " +
+                " ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 " ADDRESS VARCHAR(21)" +
                 ")"
         );
@@ -70,7 +70,7 @@ public class SQLiteJDBCDriverConnection {
         System.out.println("******************** CREATE TABLE CLIENT_DIRECTORY ********************");
         stmt.execute("" +
                 "CREATE TABLE IF NOT EXISTS CLIENT_DIRECTORY (" +
-                " ID INTEGER AUTO_INCREMENT, " +
+                " ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 " CLIENT_ID INTEGER NOT_NUL, " +
                 " DIRECTORY_ID INTEGER NOT_NUL, " +
                 " FOREIGN KEY (CLIENT_ID) REFERENCES CLIENT (ID)" +
@@ -89,12 +89,12 @@ public class SQLiteJDBCDriverConnection {
 
         stmt.execute("DELETE FROM SHARED"); //LIMPA ANTERIOR PARA FINS DE TESTE
 
-        String sqlA0 ="INSERT INTO CLIENT(ID, ADDRESS) VALUES (1, 'CLIENTE-PC'), (2, 'GHOST-PC');";
-        String sqlA1 = "INSERT INTO DIRECTORY( ID, TITLE, SHARED_PATH, SIZE_PATH ) VALUES " +
-                "(1, 'TESTE', 'DIRETORIO', 0), (2, 'TESTE2', 'DIRETORIO2', 0);";
-        String sqlB = "INSERT INTO CLIENT_DIRECTORY (ID, CLIENT_ID, DIRECTORY_ID) VALUES (0,1,2)";
-        String sqlB1 = "INSERT INTO CLIENT_DIRECTORY (ID, CLIENT_ID, DIRECTORY_ID) VALUES (0,2,2);";
-        String sqlB2 = "INSERT INTO CLIENT_DIRECTORY (ID, CLIENT_ID, DIRECTORY_ID) VALUES (0,1,1);";
+        String sqlA0 ="INSERT INTO CLIENT(ADDRESS) VALUES ('CLIENTE-PC'), ('GHOST-PC');";
+        String sqlA1 = "INSERT INTO DIRECTORY( TITLE, SHARED_PATH, SIZE_PATH ) VALUES " +
+                "('TESTE', 'DIRETORIO', 0), ('TESTE2', 'DIRETORIO2', 0);";
+        String sqlB = "INSERT INTO CLIENT_DIRECTORY (CLIENT_ID, DIRECTORY_ID) VALUES (1,2)";
+        String sqlB1 = "INSERT INTO CLIENT_DIRECTORY ( CLIENT_ID, DIRECTORY_ID) VALUES (2,2);";
+        String sqlB2 = "INSERT INTO CLIENT_DIRECTORY ( CLIENT_ID, DIRECTORY_ID) VALUES (1,1);";
         stmt.execute(sqlA0);
         stmt.execute(sqlA1);
         stmt.execute(sqlB);

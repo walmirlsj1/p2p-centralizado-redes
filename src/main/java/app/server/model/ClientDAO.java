@@ -16,8 +16,8 @@ public class ClientDAO {
 
     public Client insert(Client client) {
         String sql_insert = String.format(
-                "INSERT INTO CLIENT(ID, ADDRESS) VALUES (%d, '%s')",
-                client.getId(), client.getAddress()
+                "INSERT INTO CLIENT(ADDRESS) VALUES ('%s')",
+                client.getAddress()
         );
 
         try {
@@ -29,7 +29,7 @@ public class ClientDAO {
             System.out.println(client.toString());
             return client;
         } catch (SQLException e) {
-            System.out.println("Method insert error: " + e.getMessage());
+            System.out.println("Error insert: " + e.getMessage());
         }
         return null;
     }
@@ -45,25 +45,26 @@ public class ClientDAO {
 
     public boolean delete(Long id) {
         try {
+            String sql = String.format("DELETE FROM CLIENT WHERE ID=%d", id);
             Statement stmt = con.createStatement();
-            return stmt.execute("DELETE FROM CLIENT WHERE ID=" + id);
+            return stmt.execute(sql);
         } catch (SQLException e) {
-            System.out.println("delete" + e.getMessage());
+            System.out.println("Error delete: " + e.getMessage());
         }
         return false;
     }
 
     public Client findById(Long id) {
-        String sql = "select * from CLIENT WHERE ID=" + id;
+        String sql = String.format("SELECT * FROM CLIENT WHERE ID=%d", id);
 
         try {
             PreparedStatement query = con.prepareStatement(sql);
             ResultSet resultSet = query.executeQuery();
 
-            if (resultSet.first())
+            if (resultSet.next())
                 return resultSetToClient(resultSet);
         } catch (SQLException e) {
-            System.out.println("findById: " + e.getMessage());
+            System.out.println("Error findById: " + e.getMessage());
         }
         return null;
     }
@@ -94,16 +95,16 @@ public class ClientDAO {
     }
 
     public Client findByAddress(String address) {
-        String sql = "select * from CLIENT WHERE ADDRESS=" + address;
+        String sql = String.format("SELECT * FROM CLIENT WHERE ADDRESS='%s'", address);
 
         try {
             PreparedStatement query = con.prepareStatement(sql);
             ResultSet resultSet = query.executeQuery();
 
-            if (resultSet.first())
+            if (resultSet.next())
                 return resultSetToClient(resultSet);
         } catch (SQLException e) {
-            System.out.println("findById: " + e.getMessage());
+            System.out.println("Error findByAddress: " + e.getMessage());
         }
         return null;
     }

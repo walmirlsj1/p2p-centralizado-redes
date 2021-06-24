@@ -55,20 +55,6 @@ public class ServidorDiretorio {
         }
     }
 
-    private String processar(String operacao, String key, String ip) {
-        String temp = "Mal Formatado";
-        if (operacao.equals("FIND")) {
-            temp = "GET;" + key + ";" + this.shareListIp.get(key);
-        } else if (operacao.equals("REG")) {
-            this.shareListIp.put(key, ip);
-            temp = "OK";
-        } else if (operacao.equals("REGALL")) {
-
-        }
-
-        return temp;
-    }
-
     public void start() throws IOException, SQLException {
 //        int port = 6543;
         ServerSocket welcomeSocket = new ServerSocket(this.port);
@@ -84,8 +70,8 @@ public class ServidorDiretorio {
          * Recebe dados do cliente
          */
         char operation = recebe.readChar();
-        int length = recebe.readInt();
         int indice = recebe.readInt();
+        int length = recebe.readInt();
         byte[] data = recebe.readNBytes(length);
 
         /**
@@ -96,7 +82,7 @@ public class ServidorDiretorio {
         int indiceReply = 0;
 //        byte[] dataReply;
 
-        String messageReply = "";
+        String messageReply = "Request Failed";
         /**
          * ~~~~~~~~~~~ SERVER ~~~~~~~~~~~
          * (s)eek         : share from clients
@@ -119,7 +105,7 @@ public class ServidorDiretorio {
          * (k)ey          : cliente_id
          *
          * ===========================================================================
-         * | operation | length | indice | byte[]                                    |
+         * | operation | indice | length | byte[]                                    |
          * ===========================================================================
          */
         switch (operation) {
@@ -162,7 +148,15 @@ public class ServidorDiretorio {
                 break;
             case 'l':
                 System.out.println("List all share or contains key");
-                /* @TODO falta implementar */
+
+                messageReply = seekContains(new String(data));
+
+                if (messageReply.equals("")) {
+                    operationReply = 'n';
+                    messageReply = "Not found in shared list";
+                } else operationReply = 'l';
+
+                break;
             default:
                 throw new IOException("Operation not found!");
         }
@@ -172,11 +166,23 @@ public class ServidorDiretorio {
 //        int indiceReply = 0;
 //        byte[] dataReply;
         envia.writeChar(operationReply);
-        envia.writeInt(messageReply.length());
         envia.writeInt(indiceReply);
+        envia.writeInt(messageReply.length());
         envia.writeBytes(messageReply);
 
 //        return reply;
+    }
+
+    private String seekContains(String title) {
+        DirectoryDAO dirDAO = new DirectoryDAO();
+        List<Directory> list = dirDAO.findAllContainsTitle(title);
+        String listDir = "";
+        for (Directory d : list) {
+            listDir += d.getTitle() + ";";
+        }
+        listDir = listDir.length() > 0 ? listDir.substring(0, listDir.length() - 1) : "";
+        System.out.println("Seek contains " + title + " -- " + (listDir.length() > 0 ? listDir : "Não encontrado"));
+        return listDir;
     }
 
     private String disconnect(String s) {
@@ -196,10 +202,10 @@ public class ServidorDiretorio {
         Client client = clientDAO.findByAddress(s);
 
         if (client == null) {
+            client = new Client();
             client.setAddress(s);
             client = clientDAO.insert(client);
         }
-
         return String.valueOf(client.getId());
     }
 
@@ -207,10 +213,16 @@ public class ServidorDiretorio {
         DirectoryDAO dirDAO = new DirectoryDAO();
         Directory dir;
         String clientList = "NULL";
+        Long id = 0L;
 
-        Long id = Long.getLong(text_id);
+        try {
+            id = Long.getLong(text_id);
+            dir = dirDAO.findById(id);
+        } catch (NullPointerException e) {
+            System.out.println("Error seek: " + e.getMessage());
+            return clientList;
+        }
 
-        dir = dirDAO.findById(id);
         List<Client> listClients = dirDAO.findAllClientsByDirectory(dir);
 
         if (!listClients.isEmpty()) {
@@ -226,10 +238,19 @@ public class ServidorDiretorio {
     }
 
     private boolean register(String pacoteRecebido) {
-        String pacote[] = pacoteRecebido.split("$");
 
-        Long client_id = Long.valueOf(pacote[0]);
+        String[] pacote;
+        pacote = pacoteRecebido.split("[$]");
 
+        System.out.println(Arrays.toString(pacote));
+
+        Long client_id;
+        try {
+            client_id = Long.valueOf(pacote[0]);
+        } catch (Exception e) {
+            System.out.println("Error register: " + e.getMessage());
+            return false;
+        }
         ClientDAO clientDAO = new ClientDAO();
         DirectoryDAO directoryDAO = new DirectoryDAO();
 
@@ -256,7 +277,7 @@ public class ServidorDiretorio {
 
             directory = new Directory();
             directory.setTitle(directoryTam[0]);
-            directory.setSize(Long.valueOf(directoryTam[0]));
+            directory.setSize(Long.valueOf(directoryTam[1]));
 
             if (directoriesClient.indexOf(directory) > 0) {
                 directory = directoryDAO.findByTitle(directoryTam[0]);
