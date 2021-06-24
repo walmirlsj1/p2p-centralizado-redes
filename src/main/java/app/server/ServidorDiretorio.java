@@ -122,7 +122,6 @@ public class ServidorDiretorio {
                 break;
             case 'n': // cliente não responde a solicitação
                 System.out.println("New seek serverClient offline");
-
                 /* @TODO falta implementar */
 
                 break;
@@ -214,14 +213,15 @@ public class ServidorDiretorio {
         Directory dir;
         String clientList = "NULL";
         Long id = 0L;
+        System.out.println("seek id recebido: " + text_id);
 
-        try {
-            id = Long.getLong(text_id);
-            dir = dirDAO.findById(id);
-        } catch (NullPointerException e) {
-            System.out.println("Error seek: " + e.getMessage());
-            return clientList;
-        }
+//        try {
+        id = Long.valueOf(text_id);
+        dir = dirDAO.findById(id);
+//        } catch (NullPointerException e) {
+//            System.out.println("Error seek: " + e.getMessage());
+//            return clientList;
+//        }
 
         List<Client> listClients = dirDAO.findAllClientsByDirectory(dir);
 
@@ -258,11 +258,13 @@ public class ServidorDiretorio {
 
         if (client == null) return false;
 
+        System.out.println("Cliente: " + client.getId() + " Address: " + client.getAddress());
         Directory directory;
+        Directory directoryTemp;
 
         List<Directory> listDirectory = new ArrayList<>();
 
-        String[] list = pacote[1].split(";");
+        String[] list = pacote[1].split("[|]");
 
         List<Directory> directoriesClient = directoryDAO.getAllDirectoryByClient(client);
         /**
@@ -273,18 +275,23 @@ public class ServidorDiretorio {
          */
 
         for (String l : list) {
-            String[] directoryTam = l.split("|");
+            String[] directoryTam = l.split(";");
 
+//            System.out.println(Arrays.toString(directoryTam));
             directory = new Directory();
             directory.setTitle(directoryTam[0]);
             directory.setSize(Long.valueOf(directoryTam[1]));
 
-            if (directoriesClient.indexOf(directory) > 0) {
-                directory = directoryDAO.findByTitle(directoryTam[0]);
-                if (directory == null) {
-                    if (directoryDAO.insert(directory) != null) return false;
+            if (directoriesClient.indexOf(directory) == -1) {
+                directoryTemp = directoryDAO.findByTitle(directoryTam[0]);
+                if (directoryTemp == null) {
+
+                    directoryTemp = directoryDAO.insert(directory);
+
+                    if (directoryTemp != null) return false;
+                    System.out.println("Directory Inserido: " + directory.getTitle());
                 }
-                listDirectory.add(directory);
+                listDirectory.add(directoryTemp);
             }
         }
 

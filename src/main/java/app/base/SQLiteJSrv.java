@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.*;
 
-public class SQLiteJDBCDriverConnection {
+public class SQLiteJSrv {
     public static Connection con = null;
     public static Statement stm = null;
 
@@ -13,7 +13,7 @@ public class SQLiteJDBCDriverConnection {
             if (con != null && !con.isClosed()) {
                 return con;
             }
-            String database = "./database.db";
+            String database = "./databaseSrv.db";
 
             checkDbPath(database);
 
@@ -39,7 +39,7 @@ public class SQLiteJDBCDriverConnection {
     }
 
     public static void main(String[] args) throws Throwable {
-        Connection con = SQLiteJDBCDriverConnection.getConnection();
+        Connection con = SQLiteJSrv.getConnection();
         Statement stmt = con.createStatement();
 
         System.out.println("******************** CREATE TABLE SHARED ********************");

@@ -1,6 +1,7 @@
 package app.server.model;
 
 import app.base.SQLiteJDBCDriverConnection;
+import app.base.SQLiteJSrv;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ public class DirectoryDAO {
     private boolean debug = false;
 
     public DirectoryDAO() {
-        this.con = SQLiteJDBCDriverConnection.getConnection();
+        this.con = SQLiteJSrv.getConnection();
     }
 
     public Directory insert(Directory directory) {
@@ -19,32 +20,38 @@ public class DirectoryDAO {
                 "INSERT INTO DIRECTORY(TITLE, SIZE_PATH) VALUES ('%s', %d)",
                 directory.getTitle(), directory.getSize()
         );
-        Statement stmt;
-        try {
-            stmt = con.createStatement();
 
+        try (Statement stmt = con.createStatement()) {
             stmt.execute(sql_insert);
-            directory.setId(this.getLastId());
 
-            System.out.println(directory.toString());
             return directory;
         } catch (SQLException e) {
+            e.getStackTrace();
             System.out.println("Error insert: " + e.getMessage());
         }
         return null;
     }
 
     private Long getLastId() throws SQLException {
-        Statement stmt = con.createStatement();
+        try (Statement stmt = con.createStatement()) {
 
-        ResultSet resultSet = stmt.getGeneratedKeys();
-
-        return resultSet.getLong("last_insert_rowid()");
+            ResultSet resultSet = stmt.getGeneratedKeys();
+            return resultSet.getLong("last_insert_rowid()");
+        } catch (SQLException e) {
+            throw new SQLException("Falha ao recuperar ultimo id");
+        }
     }
 
-    public boolean delete(int id) throws SQLException {
-        Statement stmt = con.createStatement();
-        return stmt.execute("DELETE FROM DIRECTORY WHERE ID=" + id);
+    public boolean delete(int id) {
+        boolean deleted = false;
+        String sql = String.format("DELETE FROM DIRECTORY WHERE ID=%d", id);
+        try (Statement stmt = con.createStatement();) {
+            deleted = stmt.execute(sql);
+        } catch (SQLException e) {
+            System.out.println("Error delete: " + e.getMessage());
+        }
+        return deleted;
+
     }
 
     public void deleteAll() throws SQLException {
@@ -59,12 +66,15 @@ public class DirectoryDAO {
 
     public Directory findById(long id) {
         String querySql = String.format("SELECT * FROM DIRECTORY WHERE ID=%d", id);
-        try {
-            PreparedStatement query = con.prepareStatement(querySql);
+        try (PreparedStatement query = con.prepareStatement(querySql)) {
+
             ResultSet resultSet = query.executeQuery();
 
-            if (resultSet.next())
+            if (resultSet.next()) {
                 return resultSetToDirectory(resultSet);
+            } else {
+                System.out.println("Não tem proximo");
+            }
         } catch (SQLException e) {
             System.out.println("Error findById: " + e.getMessage());
         }
@@ -74,8 +84,9 @@ public class DirectoryDAO {
     public Directory findByTitle(String title) {
 
         String sql = String.format("SELECT * FROM DIRECTORY WHERE TITLE='%s'", title);
-        try {
-            PreparedStatement query = con.prepareStatement(sql);
+
+        try (PreparedStatement query = con.prepareStatement(sql)) {
+
             ResultSet resultSet = query.executeQuery();
 
             if (resultSet.next())
@@ -122,7 +133,7 @@ public class DirectoryDAO {
         Long id = resultSet.getLong("ID");
         String title = resultSet.getString("TITLE");
         Long size = resultSet.getLong("SIZE_PATH");
-
+        System.out.println(String.format("id: %d title: %s size: %d", id, title, size));
         return new Directory(id, title, size);
     }
 
@@ -131,12 +142,12 @@ public class DirectoryDAO {
                 "INSERT INTO CLIENT_DIRECTORY(CLIENT_ID, DIRECTORY_ID) VALUES ('%d', %d);",
                 client.getId(), directory.getId()
         );
-        Statement stmt;
-        try {
-            stmt = con.createStatement();
 
+        try (Statement stmt = con.createStatement()) {
             stmt.execute(sql_insert);
+
             directory.setId(this.getLastId());
+
 
             System.out.println(directory.toString());
             return true;
@@ -151,8 +162,9 @@ public class DirectoryDAO {
         String sql = "SELECT C.* FROM CLIENT_DIRECTORY AS F, CLIENT AS C, DIRECTORY AS D " +
                 "WHERE F.CLIENT_ID=C.ID AND F.DIRECTORY_ID=D.ID AND D.ID=%d;";
         sql = String.format(sql, dir.getId());
-        try {
-            PreparedStatement query = con.prepareStatement(sql);
+
+        try (PreparedStatement query = con.prepareStatement(sql)) {
+
             ResultSet resultSet = query.executeQuery();
 
             return clientDAO.convertListClient(resultSet);
@@ -168,8 +180,7 @@ public class DirectoryDAO {
                 "WHERE F.CLIENT_ID=C.ID AND F.DIRECTORY_ID=D.ID AND C.ID=%d;";
         sql = String.format(sql, client.getId());
 
-        try {
-            PreparedStatement query = con.prepareStatement(sql);
+        try (PreparedStatement query = con.prepareStatement(sql)) {
             ResultSet resultSet = query.executeQuery();
 
             return convertListDirectory(resultSet);
@@ -183,10 +194,9 @@ public class DirectoryDAO {
         String sql = "DELETE FROM CLIENT_DIRECTORY AS CD WHERE CD.CLIENT_ID=%d;";
         sql = String.format(sql, client.getId());
 
-        try {
-            PreparedStatement query = con.prepareStatement(sql);
-            ResultSet resultSet = query.executeQuery();
+        try (PreparedStatement query = con.prepareStatement(sql)) {
 
+            query.execute();
             return true;
         } catch (SQLException e) {
             System.out.println("Error deleteAllDirectoryByClient: " + e.getMessage());

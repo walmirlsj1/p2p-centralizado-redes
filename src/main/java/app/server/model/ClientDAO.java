@@ -1,6 +1,7 @@
 package app.server.model;
 
 import app.base.SQLiteJDBCDriverConnection;
+import app.base.SQLiteJSrv;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ public class ClientDAO {
     private boolean debug = false;
 
     public ClientDAO() {
-        this.con = SQLiteJDBCDriverConnection.getConnection();
+        this.con = SQLiteJSrv.getConnection();
     }
 
     public Client insert(Client client) {
@@ -20,10 +21,10 @@ public class ClientDAO {
                 client.getAddress()
         );
 
-        try {
-            Statement stmt = con.createStatement();
+        try (Statement stmt = con.createStatement()) {
 
             stmt.execute(sql_insert);
+
             client.setId(this.getLastId());
 
             System.out.println(client.toString());
@@ -35,30 +36,33 @@ public class ClientDAO {
     }
 
     private Long getLastId() throws SQLException {
-        Statement stmt = con.createStatement();
+        try (Statement stmt = con.createStatement()) {
 
-        ResultSet resultSet = stmt.getGeneratedKeys();
-
-        return resultSet.getLong("last_insert_rowid()");
+            ResultSet resultSet = stmt.getGeneratedKeys();
+            return resultSet.getLong("last_insert_rowid()");
+        } catch (SQLException e) {
+            throw new SQLException("Falha ao recuperar ultimo id");
+        }
     }
 
 
     public boolean delete(Long id) {
-        try {
-            String sql = String.format("DELETE FROM CLIENT WHERE ID=%d", id);
-            Statement stmt = con.createStatement();
-            return stmt.execute(sql);
+        boolean deleted = false;
+        String sql = String.format("DELETE FROM CLIENT WHERE ID=%d", id);
+        try (Statement stmt = con.createStatement()) {
+            deleted = stmt.execute(sql);
+
         } catch (SQLException e) {
             System.out.println("Error delete: " + e.getMessage());
         }
-        return false;
+        return deleted;
     }
 
     public Client findById(Long id) {
         String sql = String.format("SELECT * FROM CLIENT WHERE ID=%d", id);
 
-        try {
-            PreparedStatement query = con.prepareStatement(sql);
+        try (PreparedStatement query = con.prepareStatement(sql)) {
+
             ResultSet resultSet = query.executeQuery();
 
             if (resultSet.next())
@@ -97,8 +101,7 @@ public class ClientDAO {
     public Client findByAddress(String address) {
         String sql = String.format("SELECT * FROM CLIENT WHERE ADDRESS='%s'", address);
 
-        try {
-            PreparedStatement query = con.prepareStatement(sql);
+        try (PreparedStatement query = con.prepareStatement(sql)) {
             ResultSet resultSet = query.executeQuery();
 
             if (resultSet.next())

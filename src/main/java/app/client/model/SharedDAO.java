@@ -1,6 +1,7 @@
 package app.client.model;
 
 import app.base.SQLiteJDBCDriverConnection;
+import app.server.model.Directory;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -15,14 +16,15 @@ public class SharedDAO {
     }
 
     public Shared insert(Shared shared) {
-        try {
-            Statement stmt = con.createStatement();
+        try (Statement stmt = con.createStatement()) {
+
             String sql_insert = String.format(
                     "INSERT INTO SHARED(TITLE, SHARED_PATH, SIZE_PATH) VALUES ('%s', '%s', %d)",
                     shared.getTitle(), shared.getPath(), shared.getSize()
             );
 
             stmt.execute(sql_insert);
+
             shared.setId(this.getLastId());
 
             System.out.println(shared.toString());
@@ -34,33 +36,38 @@ public class SharedDAO {
     }
 
     private Long getLastId() throws SQLException {
-        Statement stmt = con.createStatement();
+        try (Statement stmt = con.createStatement()) {
 
-        ResultSet resultSet = stmt.getGeneratedKeys();
-
-        return resultSet.getLong("last_insert_rowid()");
+            ResultSet resultSet = stmt.getGeneratedKeys();
+            return resultSet.getLong("last_insert_rowid()");
+        } catch (SQLException e) {
+            throw new SQLException("Falha ao recuperar ultimo id");
+        }
     }
 
-    public Shared findById(long id) throws SQLException {
-        String querySql = String.format("select * from SHARED WHERE ID=%d", id);
+    public Shared findById(long id) {
+        String querySql = String.format("SELECT * FROM SHARED WHERE ID=%d", id);
+        try (PreparedStatement query = con.prepareStatement(querySql)) {
 
-        PreparedStatement query = con.prepareStatement(querySql);
-        ResultSet resultSet = query.executeQuery();
+            ResultSet resultSet = query.executeQuery();
 
-        if (resultSet.next())
-            return resultSetToShared(resultSet);
-
+            if (resultSet.next())
+                return resultSetToShared(resultSet);
+        } catch (SQLException e) {
+            System.out.println("Error findById: " + e.getMessage());
+        }
         return null;
     }
 
     public boolean delete(Long id) {
-        try {
-            Statement stmt = con.createStatement();
-            return stmt.execute("DELETE FROM SHARED WHERE ID=" + id);
+        boolean deleted = false;
+
+        try (Statement stmt = con.createStatement()) {
+            deleted = stmt.execute("DELETE FROM SHARED WHERE ID=" + id);
         } catch (SQLException e) {
             System.out.println("Error delete: " + e.getMessage());
         }
-        return false;
+        return deleted;
     }
 
     public void deleteAll() throws SQLException {
@@ -74,10 +81,13 @@ public class SharedDAO {
     }
 
     public List<Shared> findAll() throws SQLException {
-        PreparedStatement query = con.prepareStatement("select * from SHARED");
-        ResultSet resultSet = query.executeQuery();
-
-        return convertListShared(resultSet);
+        try(PreparedStatement query = con.prepareStatement("select * from SHARED")){
+            ResultSet resultSet = query.executeQuery();
+            return convertListShared(resultSet);
+        }catch (SQLException e){
+            System.out.println("Error findAll: " + e.getMessage());
+        }
+        return null;
     }
 
     private List<Shared> convertListShared(ResultSet resultSet) throws SQLException {

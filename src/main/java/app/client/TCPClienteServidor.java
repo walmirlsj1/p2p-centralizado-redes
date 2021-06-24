@@ -7,10 +7,11 @@ import app.client.model.Shared;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 
 import java.io.*;
-import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -30,6 +31,9 @@ public class TCPClienteServidor {
     private String localPort;
     private String ipAddress;
     private Long myID;
+    private static Socket clientSocket;
+    private static DataOutputStream send;
+    private static DataInputStream receive;
 
     private boolean started = false;
 
@@ -45,7 +49,8 @@ public class TCPClienteServidor {
         this.portServDir = 6543;
         this.portClientSrv = portClientSrv; //6789
 
-        if (!this.processar("APPLY")) return;
+        init();
+        register();
 
         this.started = true;
         this.startThreadSrv();
@@ -129,6 +134,7 @@ public class TCPClienteServidor {
         while (flagContinue) {
             flagContinue = clientConsole();
         }
+        System.exit(0);
     }
 
     private boolean clientConsole() throws Exception {
@@ -140,6 +146,7 @@ public class TCPClienteServidor {
         System.out.println("===  (R)EG: Registra Arquivo/Pasta       ===");
         System.out.println("===  (G)ET: Solicita Download do arquivo ===");
         System.out.println("=== (F)IND: Procura arquivo no server    ===");
+        System.out.println("===  (D)EL: Remove um item compartilhado ===");
         System.out.println("=== (E)XIT: Para sair                    ===");
         System.out.println("============================================");
         System.out.println("Informe OP: GET/FIND/REG");
@@ -162,53 +169,62 @@ public class TCPClienteServidor {
          */
         boolean flagContinue = true;
 
-        Socket clientSocket = null;
 
-        try {
-            clientSocket = new Socket("localhost", this.portServDir);//6543
-
-            this.ipAddress = clientSocket.getLocalAddress().getHostAddress();
-
-        } catch (ConnectException e) {
-            System.out.println("Servidor offline: " + e.getMessage());
-            return false;
-        }
-
-        DataOutputStream envia = new DataOutputStream(clientSocket.getOutputStream());
-
-        DataInputStream receive = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
-
-
-        if (op.equals("APPLY") || op.equals("A")) {
-            applyServer(envia, receive);
-
-        } else if (op.equals("REG") || op.equals("R")) {
+        if (op.equals("REG") || op.equals("R")) {
             Shared share = registerShareConsole();
-            if (share != null) registerShareServer(envia, receive, share);
+            /* @FIXME Estamos enviando todos os items compartilhados, pra adiantar */
+            registerShareServer();
 
         } else if (op.equals("GET") || op.equals("G")) {  // GET: Solicita Download do arquivo
-            getListPeerForDownload(envia, receive);
+            getListPeerForDownload();
 
         } else if (op.equals("FIND") || op.equals("F")) { // FIND: Procura arquivo no server
-            findServer(envia, receive);
+            findServer();
+        } else if (op.equals("DEL") || op.equals("D")) { // FIND: Procura arquivo no server
+            /* @TODO falta implementar: deletar um item do compartilhamento */
+            throw new Exception("Delete não implementado");
 
         } else if (op.equals("EXIT") || op.equals("E")) {
-            disconnectFromServerDirectory(envia, receive);
+            disconnectFromServerDirectory();
 
             flagContinue = this.started = false;
         }
 
-        clientSocket.close();
+//        clientSocket.close();
         return flagContinue;
     }
 
-    private void applyServer(DataOutputStream envia, DataInputStream receive) throws IOException, Exception {
-        sendServer(envia, 'a', 0, this.ipAddress + ":" + this.portClientSrv);
+    private void serverGo(char op, int indice, String message) throws IOException {
+        getConnection();
+        this.sendServer(op, indice, message);
+        this.receiveFromServer();
+        clientSocket.close();
+    }
 
-        receiveFromServer(receive);
+    private void getConnection() throws IOException {
+        this.clientSocket = new Socket("localhost", this.portServDir);//6543
+        this.ipAddress = clientSocket.getLocalAddress().getHostAddress();
+        this.send = new DataOutputStream(clientSocket.getOutputStream());
+        this.receive = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
+
+    }
+
+    private void init() throws Exception {
+        applyServer();
+    }
+
+    private void register() throws SQLException, IOException {
+        registerShareServer();
+    }
+
+
+    private void applyServer() throws Exception {
+        getConnection();
+        this.sendServer('a', 0, this.ipAddress + ":" + this.portClientSrv);
+        this.receiveFromServer();
+        clientSocket.close();
 
         String received = new String(retornoSRV);
-        System.out.println("received: " + received);
         try {
             this.myID = Long.valueOf(received);
         } catch (Exception e) {
@@ -217,35 +233,41 @@ public class TCPClienteServidor {
         System.out.println("Meu ID: " + this.myID);
     }
 
-    private void registerShareServer(DataOutputStream envia, DataInputStream receive, Shared share) throws IOException {
+    private void registerShareServer() throws SQLException, IOException {
+        List<Shared> shares = new SharedDAO().findAll();
+        if (shares.isEmpty()) return;
+
 //        myID.toString() + "$" + share.getTitle() + ";" + share.getSize()
-        String messagem = String.format("%d$%s;%d", myID, share.getTitle(), share.getSize());
+        String shareText = "";
+        for (Shared share : shares) {
+            shareText += String.format("%s;%d|", share.getTitle(), share.getSize());
+        }
+        System.out.println("Lista vazia: " + shares.isEmpty());
+        shareText = shareText.substring(0, shareText.length() - 1);
 
-        sendServer(envia, 'r', 0, messagem);
+        String messagem = String.format("%d$%s", myID, shareText);
 
-//        myID
-
-        receiveFromServer(receive);
-
-        String resposta = new String(retornoSRV);
-        System.out.println("resposta do servidor: " + resposta);
-    }
-
-    private void disconnectFromServerDirectory(DataOutputStream send, DataInputStream receive) throws IOException {
-        sendServer(send, 'd', 0, String.valueOf(this.myID));
-        receiveFromServer(receive);
-
+        serverGo('r', 0, messagem);
 
         String resposta = new String(retornoSRV);
         System.out.println("resposta do servidor: " + resposta);
+
+        clientSocket.close();
     }
 
-    private void getListPeerForDownload(DataOutputStream send, DataInputStream receive) throws IOException {
+    private void disconnectFromServerDirectory() throws IOException {
+        serverGo('d', 0, String.valueOf(this.myID));
+
+        String resposta = new String(retornoSRV);
+        System.out.println("Desconectado do servidor: " + resposta);
+    }
+
+    private void getListPeerForDownload() throws IOException {
         BufferedReader scanner =
                 new BufferedReader(new InputStreamReader(System.in));
 
         Long id = -1L;
-        while (id == -1l) {
+        while (id == -1L) {
             try {
                 System.out.println("Informe o ID para requisitar download: ");
                 id = Long.valueOf(scanner.readLine());
@@ -254,16 +276,16 @@ public class TCPClienteServidor {
                 id = -1L;
             }
         }
-        sendServer(send, 's', 0, String.valueOf(id));
+        System.out.println("OPERATION GET: " + id);
 
-        receiveFromServer(receive);
+        serverGo('s', 0, String.valueOf(id));
 
         String resposta = new String(retornoSRV);
         System.out.println("resposta do servidor: " + resposta);
 
     }
 
-    private void findServer(DataOutputStream send, DataInputStream receive) throws IOException {
+    private void findServer() throws IOException {
         BufferedReader scanner =
                 new BufferedReader(new InputStreamReader(System.in));
         String title = "";
@@ -276,10 +298,7 @@ public class TCPClienteServidor {
                 title = "";
             }
         }
-
-        sendServer(send, 'l', 0, title);
-
-        receiveFromServer(receive);
+        serverGo('l', 0, title);
 
         String[] list = new String(retornoSRV).split(";");
 
@@ -293,14 +312,15 @@ public class TCPClienteServidor {
         }
     }
 
-    private void receiveFromServer(DataInputStream receive) throws IOException {
+    private void receiveFromServer() throws IOException {
         this.type = receive.readChar();
         this.indice = receive.readInt();
         this.length = receive.readInt();
         this.retornoSRV = receive.readNBytes(length);
     }
 
-    private void sendServer(DataOutputStream send, char op, int indice, String message) throws IOException {
+
+    private void sendServer(char op, int indice, String message) throws IOException {
         send.writeChar(op);                 // operacao
         send.writeInt(indice);                    // indice
         send.writeInt(message.length());   // length
