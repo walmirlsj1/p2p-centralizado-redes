@@ -25,7 +25,7 @@ public class Config {
              * config server
              */
             config.setProperty("srv_database", "databaseSrv.db");
-            config.setProperty("srv_port", "6986");
+            config.setProperty("srv_port", "7000");
             config.setProperty("srv_ip", "127.0.0.1");
 
             /**
@@ -35,7 +35,7 @@ public class Config {
             config.setProperty("client_port", "6315");
             config.setProperty("client_id", "0");
             config.setProperty("server_ip", "127.0.0.1");
-            config.setProperty("server_port", "6986");
+            config.setProperty("server_port", "7000");
 
             layout.save(config, new FileWriter(file));
         } else {

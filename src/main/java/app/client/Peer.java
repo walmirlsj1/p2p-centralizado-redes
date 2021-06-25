@@ -5,16 +5,12 @@ import app.client.model.SharedDAO;
 import app.config.Config;
 import app.client.model.Shared;
 import org.apache.commons.configuration2.PropertiesConfiguration;
-import org.apache.commons.configuration2.ex.ConfigurationException;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Ideias
@@ -25,7 +21,7 @@ import java.util.Properties;
  * salvar progresso do donwload, para que não corromper o arquivo.!!
  */
 
-public class TCPClienteServidor {
+public class Peer {
 
     private Integer clientSrvPort, serverPortDir;
 
@@ -44,30 +40,11 @@ public class TCPClienteServidor {
     byte[] retornoSRV;
 
 
-    public TCPClienteServidor(int clientSrvPort) {
-        this.carregaConfig();
-    }
-
-    private void carregaConfig() {
-//        config.setProperty("client_port", "6315");
-//        config.setProperty("client_id", "0");
-//        config.setProperty("server_ip", "127.0.0.1");
-//        config.setProperty("server_port", "6986");
-        PropertiesConfiguration config;
-        try {
-            config = Config.getConfiguracao();
-            this.clientSrvPort = config.getInt("client_port"); //6789
-            this.clientId = config.getLong("client_id");
-
-            this.serverIpDir = config.getString("server_ip");
-            this.serverPortDir = config.getInt("server_port");
-
-
-        } catch (ConfigurationException | IOException e) {
-            // TODO Auto-generated catch block
-            Config.deleteConfig();
-            throw new RuntimeException(e);
-        }
+    public Peer(Long clientId, int clientSrvPort, String serverIpDir, int serverPortDir) {
+        this.clientSrvPort = clientSrvPort; //6789
+        this.clientId = clientId;
+        this.serverIpDir = serverIpDir;
+        this.serverPortDir = serverPortDir;
     }
 
     public void run() throws Exception {
@@ -120,7 +97,7 @@ public class TCPClienteServidor {
             String respP2P = "Falha na requisição";
             if (infoSrvDir[0].equals("GET")) {
 
-                respP2P = this.shareList.get(infoSrvDir[1]);
+//                respP2P = this.shareList.get(infoSrvDir[1]);
 
             }
             capitalizedSentence = respP2P + '\n';
@@ -510,7 +487,25 @@ public class TCPClienteServidor {
     }
 
     public static void main(String[] args) throws Exception {
-        TCPClienteServidor cli = new TCPClienteServidor(6789);
+
+        String serverIpDir;
+        int clientSrvPort, serverPortDir;
+        Long clientId;
+
+        try {
+            PropertiesConfiguration config = Config.getConfiguracao();
+            clientSrvPort = config.getInt("client_port"); //6789
+            clientId = config.getLong("client_id");
+
+            serverIpDir = config.getString("server_ip");
+            serverPortDir = config.getInt("server_port");
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            Config.deleteConfig();
+            throw new RuntimeException("Falha na configuração, tente novamente!");
+        }
+
+        Peer cli = new Peer(clientId, clientSrvPort, serverIpDir, serverPortDir);
         cli.run();
         cli.disconnect();
 

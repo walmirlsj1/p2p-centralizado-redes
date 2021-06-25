@@ -1,17 +1,16 @@
 package app.server;
 
-import app.config.Config;
-
-import org.apache.commons.configuration2.ex.ConfigurationException;
-
 import java.io.*;
 import java.net.*;
 import java.sql.SQLException;
-import java.util.concurrent.Executor;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ServidorDiretorio {
+import app.config.Config;
+
+
+public class Server {
     /**
      * Conhece todos os clientes, e os seus compartilhamentos
      * <p>
@@ -29,40 +28,24 @@ public class ServidorDiretorio {
      * sha1 ou md5 para verificar arquivos.. zip.001 - sha1...
      * hash de arquivo final?
      */
-    private int port;
-    private String databaseName = null;
-    private String localPort = null;
+    private int serverPort;
 
     protected ExecutorService threadPool =
             Executors.newFixedThreadPool(20);
 
-    public ServidorDiretorio(int port) {
-        this.port = port;
-        this.carregaConfig();
-    }
-
-    private void carregaConfig() {
-        try {
-            databaseName = Config.getConfiguracao().getString("database-srv-dir");
-            localPort = Config.getConfiguracao().getString("local-port");
-        } catch (ConfigurationException e) {
-            // TODO Auto-generated catch block
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            throw new RuntimeException(e);
-        }
+    public Server(int serverPort) {
+        this.serverPort = serverPort;
     }
 
     public void start() {
 //        int port = 6543;
         ServerSocket socketServidor = null;
         try {
-            socketServidor = new ServerSocket(this.port);
+            socketServidor = new ServerSocket(this.serverPort);
         } catch (IOException e) {
-            throw new RuntimeException(String.format("start: Falha ao criar socket na porta: %d ", this.port));
+            throw new RuntimeException(String.format("start: Falha ao criar socket na porta: %d ", this.serverPort));
         }
-        System.out.println(" ::::::: PORT: " + this.port + " ::::::: ");
+        System.out.println(" ::::::: PORT: " + this.serverPort + " ::::::: ");
 
         while (!socketServidor.isClosed()) {
             Socket client = null;
@@ -79,9 +62,15 @@ public class ServidorDiretorio {
 
     public static void main(String[] args) throws IOException, SQLException {
         System.out.println(" ::::::: Servidor DIRETORIOS ::::::: ");
-        int portServidor = 6543;
-
-        new ServidorDiretorio(portServidor).start();
+        int serverPort = 7000;
+        try {
+            serverPort = Config.getConfiguracao().getInt("srv_port");
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            Config.deleteConfig();
+            throw new RuntimeException("Falha na configuração, tente novamente!");
+        }
+        new Server(serverPort).start();
 
     }
 
