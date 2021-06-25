@@ -4,6 +4,7 @@ import app.base.FileManager;
 import app.client.model.SharedDAO;
 import app.config.Config;
 import app.client.model.Shared;
+import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 
 import java.io.*;
@@ -13,6 +14,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
 
 /**
  * Ideias
@@ -24,57 +26,63 @@ import java.util.Locale;
  */
 
 public class TCPClienteServidor {
-    private Runnable threadSrv;
-    private HashMap<Shared, String> shareList;
-    private Integer portClientSrv, portServDir;
-    private String databaseName;
-    private String localPort;
-    private String ipAddress;
-    private Long myID;
-    private static Socket clientSocket;
-    private static DataOutputStream send;
-    private static DataInputStream receive;
+
+    private Integer clientSrvPort, serverPortDir;
+
+    private String serverIpDir;
+    private Long clientId;
+
+
+    private Socket clientSocket;
+    private DataOutputStream send;
+    private DataInputStream receive;
 
     private boolean started = false;
 
     char type;
-    int indice = 0;
     int length = 0;
     byte[] retornoSRV;
 
-    public TCPClienteServidor(int portClientSrv) throws Exception {
+
+    public TCPClienteServidor(int clientSrvPort) {
         this.carregaConfig();
-        this.shareList = new HashMap<>();
+    }
 
-        this.portServDir = 6543;
-        this.portClientSrv = portClientSrv; //6789
+    private void carregaConfig() {
+//        config.setProperty("client_port", "6315");
+//        config.setProperty("client_id", "0");
+//        config.setProperty("server_ip", "127.0.0.1");
+//        config.setProperty("server_port", "6986");
+        PropertiesConfiguration config;
+        try {
+            config = Config.getConfiguracao();
+            this.clientSrvPort = config.getInt("client_port"); //6789
+            this.clientId = config.getLong("client_id");
 
+            this.serverIpDir = config.getString("server_ip");
+            this.serverPortDir = config.getInt("server_port");
+
+
+        } catch (ConfigurationException | IOException e) {
+            // TODO Auto-generated catch block
+            Config.deleteConfig();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void run() throws Exception {
         init();
         register();
 
         this.started = true;
         this.startThreadSrv();
         this.startClient();
-
-    }
-
-    private void carregaConfig() {
-        try {
-            databaseName = Config.getConfiguracao().getString("database-srv-dir");
-            localPort = Config.getConfiguracao().getString("local-port");
-        } catch (ConfigurationException e) {
-            // TODO Auto-generated catch block
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            throw new RuntimeException(e);
-        }
     }
 
     private void startThreadSrv() {
-        threadSrv = () -> {
+        Runnable threadSrv = () -> {
             try {
-                System.out.println("Iniciando Servidor Local porta: " + portClientSrv);
+                System.out.println("Iniciando Servidor Local porta: " + clientSrvPort);
                 serverStart();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -87,7 +95,7 @@ public class TCPClienteServidor {
         String clientSentence;
         String capitalizedSentence;
 
-        ServerSocket server = new ServerSocket(this.portClientSrv);
+        ServerSocket server = new ServerSocket(this.clientSrvPort);
 
         while (true) {
             /**
@@ -96,8 +104,6 @@ public class TCPClienteServidor {
              * ex. 16 clientes de uma vez
              *
              */
-//            System.out.println("Aguardando clientes");
-
             Socket cliente = server.accept();
 
             BufferedReader inFromClient =
@@ -160,9 +166,9 @@ public class TCPClienteServidor {
         /**
          *          * (s)eek         : share from clients
          *          * (n)ew          : seek client-serv offline
-         *          * (r)egister     : share list need client_id*
-         *          * (a)ply         : generate client_id* para client-serv
-         *          * (d)isconnect   : from server need client_id*
+         *          * (r)egister     : share list need clientId*
+         *          * (a)ply         : generate clientId* para client-serv
+         *          * (d)isconnect   : from server need clientId*
          *          * (e)rror        : request
          *          * (o)K           : OK
          *          * (l)ist         : list all share or contains key*
@@ -171,7 +177,7 @@ public class TCPClienteServidor {
 
 
         if (op.equals("REG") || op.equals("R")) {
-            Shared share = registerShareConsole();
+            registerShareConsole();
             /* @FIXME Estamos enviando todos os items compartilhados, pra adiantar */
             registerShareServer();
 
@@ -194,18 +200,59 @@ public class TCPClienteServidor {
         return flagContinue;
     }
 
-    private void serverGo(char op, int indice, String message) throws IOException {
-        getConnection();
-        this.sendServer(op, indice, message);
+    private void serverGo(char op, String message) throws IOException {
+        try {
+            clientSocket = new Socket(this.serverIpDir, this.serverPortDir);//6543
+        } catch (IOException e) {
+            System.out.println("Server offline");
+            System.exit(0);
+        }
+        this.send = new DataOutputStream(clientSocket.getOutputStream());
+        this.receive = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
+
+        this.sendServer(op, message);
         this.receiveFromServer();
+
         clientSocket.close();
     }
 
-    private void getConnection() throws IOException {
-        this.clientSocket = new Socket("localhost", this.portServDir);//6543
-        this.ipAddress = clientSocket.getLocalAddress().getHostAddress();
-        this.send = new DataOutputStream(clientSocket.getOutputStream());
-        this.receive = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
+    private void getConnectionClientServer(String hostname, int port, String path) throws IOException {
+        FileManager fr = new FileManager();
+
+
+        Socket clientSocket = new Socket(hostname, port);//6543
+        String ipAddressSrv = clientSocket.getLocalAddress().getHostAddress();
+        DataOutputStream sendSrv = new DataOutputStream(clientSocket.getOutputStream());
+        DataInputStream receiveSrv = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
+
+        List<String> loadFileList = fr.loadFileList(path);
+//        for (String s : loadFileList) {
+//            fr.sendFileDir(new File(s), sendSrv);
+//        }
+        /**
+         *
+         * 1 - enviar a lista de arquivos para download
+         * 2 - enviar tamanho total sera salvo em um zip para teste
+         * 3 - enviar arquivo e indice da ultima posicao enviada
+         * 4 - client vai ler o arquivo e guardar o indice, e o ultimo arquivo enviado
+         * 5 - enviar um informação como fim de conexao
+         * Apartir do momento que o cliente tem esse arquivo, ou parte dele
+         * seria interessante o cliente compartilhar essa informação
+         * mais vamos só fazer funcionar por enquanto.
+         */
+        /**
+         * while(count<total){
+         *      part = byte[16*1024] //
+         *      append[part] in file
+         *      count++;
+         * }
+         *
+         */
+        /* @TODO falta implementar 1!!!*/
+
+        this.type = receive.readChar();
+        this.length = receive.readInt();
+        this.retornoSRV = receive.readNBytes(length);
 
     }
 
@@ -219,25 +266,26 @@ public class TCPClienteServidor {
 
 
     private void applyServer() throws Exception {
-        getConnection();
-        this.sendServer('a', 0, this.ipAddress + ":" + this.portClientSrv);
-        this.receiveFromServer();
-        clientSocket.close();
+        serverGo('a', String.valueOf(this.clientSrvPort));
+//        getConnectionServerDir();
+//        this.sendServer('a', String.valueOf(this.clientSrvPort));
+//        this.receiveFromServer();
+//        clientSocket.close();
 
         String received = new String(retornoSRV);
         try {
-            this.myID = Long.valueOf(received);
+            this.clientId = Long.valueOf(received);
         } catch (Exception e) {
             throw new Exception("Não foi possivel registrar cliente no servidor");
         }
-        System.out.println("Meu ID: " + this.myID);
+        System.out.println("Meu ID: " + this.clientId);
     }
 
     private void registerShareServer() throws SQLException, IOException {
         List<Shared> shares = new SharedDAO().findAll();
         if (shares.isEmpty()) return;
 
-//        myID.toString() + "$" + share.getTitle() + ";" + share.getSize()
+//        clientId.toString() + "$" + share.getTitle() + ";" + share.getSize()
         String shareText = "";
         for (Shared share : shares) {
             shareText += String.format("%s;%d|", share.getTitle(), share.getSize());
@@ -245,18 +293,15 @@ public class TCPClienteServidor {
         System.out.println("Lista vazia: " + shares.isEmpty());
         shareText = shareText.substring(0, shareText.length() - 1);
 
-        String messagem = String.format("%d$%s", myID, shareText);
+        String messagem = String.format("%d$%s", clientId, shareText);
 
-        serverGo('r', 0, messagem);
-
-        String resposta = new String(retornoSRV);
-        System.out.println("resposta do servidor: " + resposta);
+        serverGo('r', messagem);
 
         clientSocket.close();
     }
 
     private void disconnectFromServerDirectory() throws IOException {
-        serverGo('d', 0, String.valueOf(this.myID));
+        serverGo('d', String.valueOf(this.clientId));
 
         String resposta = new String(retornoSRV);
         System.out.println("Desconectado do servidor: " + resposta);
@@ -278,7 +323,7 @@ public class TCPClienteServidor {
         }
         System.out.println("OPERATION GET: " + id);
 
-        serverGo('s', 0, String.valueOf(id));
+        serverGo('s', String.valueOf(id));
 
         String resposta = new String(retornoSRV);
         System.out.println("resposta do servidor: " + resposta);
@@ -298,7 +343,7 @@ public class TCPClienteServidor {
                 title = "";
             }
         }
-        serverGo('l', 0, title);
+        serverGo('l', title);
 
         String[] list = new String(retornoSRV).split(";");
 
@@ -314,17 +359,16 @@ public class TCPClienteServidor {
 
     private void receiveFromServer() throws IOException {
         this.type = receive.readChar();
-        this.indice = receive.readInt();
         this.length = receive.readInt();
         this.retornoSRV = receive.readNBytes(length);
     }
 
 
-    private void sendServer(char op, int indice, String message) throws IOException {
+    private void sendServer(char op, String message) throws IOException {
         send.writeChar(op);                 // operacao
-        send.writeInt(indice);                    // indice
         send.writeInt(message.length());   // length
         send.writeBytes(message);          // data
+        send.flush();
     }
 
     private void processarDownload() {
@@ -361,13 +405,13 @@ public class TCPClienteServidor {
 ////        "GET;" + msg + ";" + "127.0.0.1:6789"
 //        String temp = null;
 //        if (operacao.equals("FIND")) {
-//            temp = "FIND;" + key + ";" + "127.0.0.1:" + this.portServDir;
+//            temp = "FIND;" + key + ";" + "127.0.0.1:" + this.serverPortDir;
 //        } else if (operacao.equals("REG")) {
-//            temp = "REG;" + key + ";" + "127.0.0.1:" + this.portClientSrv;
+//            temp = "REG;" + key + ";" + "127.0.0.1:" + this.clientSrvPort;
 //            Shared shared = this.registerShare();
 //            this.shareList.put(shared, key);//"diretorioXYZ" + (new Random().nextInt() * 10)
 //        } else if (operacao.equals("GET")) {
-//            temp = "GET;" + key + ";" + "127.0.0.1:" + this.portClientSrv;
+//            temp = "GET;" + key + ";" + "127.0.0.1:" + this.clientSrvPort;
 //        }
 //
 //        return temp;
@@ -429,7 +473,7 @@ public class TCPClienteServidor {
         String respSrv;
 
         Socket clientSocket = new Socket(hostname, port);//6543
-        ipAddress = clientSocket.getLocalAddress().getHostAddress();
+
         DataOutputStream outToServer =
                 new DataOutputStream(clientSocket.getOutputStream());
 
@@ -439,7 +483,6 @@ public class TCPClienteServidor {
         String textoEnviado = "Ola mundo";
 
         outToServer.writeChar('s');                 // operacao
-        outToServer.writeInt(0);                    // indice
         outToServer.writeInt(textoEnviado.length());   // length
         outToServer.writeBytes(textoEnviado);          // data
 
@@ -462,13 +505,14 @@ public class TCPClienteServidor {
         return bos;
     }
 
-    public static void main(String[] args) throws Exception {
-        TCPClienteServidor cli = new TCPClienteServidor(6789);
-        cli.disconnect();
-
+    public void disconnect() throws Exception {
+        if (started) this.processar("e");
     }
 
-    private void disconnect() throws Exception {
-        if (started) this.processar("e");
+    public static void main(String[] args) throws Exception {
+        TCPClienteServidor cli = new TCPClienteServidor(6789);
+        cli.run();
+        cli.disconnect();
+
     }
 }

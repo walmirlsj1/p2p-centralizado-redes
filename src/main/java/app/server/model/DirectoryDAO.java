@@ -133,7 +133,7 @@ public class DirectoryDAO {
         Long id = resultSet.getLong("ID");
         String title = resultSet.getString("TITLE");
         Long size = resultSet.getLong("SIZE_PATH");
-        System.out.println(String.format("id: %d title: %s size: %d", id, title, size));
+
         return new Directory(id, title, size);
     }
 
@@ -148,8 +148,6 @@ public class DirectoryDAO {
 
             directory.setId(this.getLastId());
 
-
-            System.out.println(directory.toString());
             return true;
         } catch (SQLException e) {
             System.out.println("Error insert: " + e.getMessage());

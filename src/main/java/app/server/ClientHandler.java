@@ -1,39 +1,63 @@
 package app.server;
 
-import app.server.model.Client;
-import app.server.model.ClientDAO;
-import app.server.model.Directory;
-import app.server.model.DirectoryDAO;
-
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.sql.SQLException;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-public class ClientHandle {
+import app.server.model.Client;
+import app.server.model.ClientDAO;
+import app.server.model.Directory;
+import app.server.model.DirectoryDAO;
 
-    private void processRequest(DataInputStream recebe, DataOutputStream envia) throws IOException, SQLException {
+
+public class ClientHandler implements Runnable {
+    private final Socket connectionSocket;
+    private String clientIP;
+
+    ClientHandler(Socket connectionSocket) {
+        this.connectionSocket = connectionSocket;
+    }
+
+    @Override
+    public void run() {
+        this.tratarRequisicao();
+    }
+
+    private void tratarRequisicao() {
+
+        try {
+            DataInputStream recebe =
+                    new DataInputStream(new BufferedInputStream(connectionSocket.getInputStream()));
+
+            DataOutputStream envia =
+                    new DataOutputStream(connectionSocket.getOutputStream());
+
+            this.clientIP = connectionSocket.getInetAddress().getHostAddress();
+
+            this.processRequest(recebe, envia);
+        } catch (IOException e) {
+            throw new RuntimeException("tratarRequisição: Falha no tratamento da requisição - " + clientIP);
+        }
+    }
+
+    private void processRequest(DataInputStream recebe, DataOutputStream envia) throws IOException {
         /**
          * Recebe dados do cliente
          */
         char operation = recebe.readChar();
-        int indice = recebe.readInt();
         int length = recebe.readInt();
-        byte[] data = recebe.readNBytes(length);
+//        byte[] data = recebe.readNBytes(length);
+        String data = new String(recebe.readNBytes(length));
 
         /**
          * Cria variaveis para ser usadas na resposta para o cliente
          */
         char operationReply = 'f';
-        int lengthReply = 0;
-        int indiceReply = 0;
-//        byte[] dataReply;
-
         String messageReply = "Request Failed";
         /**
          * ~~~~~~~~~~~ SERVER ~~~~~~~~~~~
@@ -57,14 +81,14 @@ public class ClientHandle {
          * (k)ey          : cliente_id
          *
          * ===========================================================================
-         * | operation | indice | length | byte[]                                    |
+         * | operation | length | byte[]                                    |
          * ===========================================================================
          */
         switch (operation) {
             case 's':
-                System.out.println("Seek file shared from clients");
+                System.out.println("Seek file shared from clients " + clientIP);
 
-                messageReply = seek(new String(data));
+                messageReply = seek(data);
 
                 if (messageReply.equals("NULL")) {
                     operationReply = 'n';
@@ -73,34 +97,32 @@ public class ClientHandle {
 
                 break;
             case 'n': // cliente não responde a solicitação
-                System.out.println("New seek serverClient offline");
+                System.out.println("New seek serverClient offline " + clientIP);
                 /* @TODO falta implementar */
 
                 break;
             case 'r':
-                System.out.println("Register shareds in server");
+                System.out.println("Register shareds in server: " + clientIP);
                 messageReply = "OK";
-                operation = register(new String(data)) ? 'o' : 'f';
+                operation = register(data) ? 'o' : 'f';
 
                 if (operation == 'e') messageReply = "Failed process request";
 
                 break;
             case 'a':
-                System.out.println("Apply in server");
-                //apply generate cliente_id
-                messageReply = apply(new String(data));
+                System.out.println("Apply in server " + clientIP);
+                messageReply = apply(data);
                 operationReply = 'o';
                 break;
             case 'd':
-                System.out.println("Disconnect from server");
-                messageReply = disconnect(new String(data));
+                System.out.println("Disconnect from server " + clientIP);
+                messageReply = disconnect(data);
                 operationReply = 'o';
-                //delete from client_id
                 break;
             case 'l':
-                System.out.println("List all share or contains key");
+                System.out.println("List all share or contains key " + clientIP);
 
-                messageReply = seekContains(new String(data));
+                messageReply = seekContains(data);
 
                 if (messageReply.equals("")) {
                     operationReply = 'n';
@@ -112,16 +134,10 @@ public class ClientHandle {
                 throw new IOException("Operation not found!");
         }
 
-//        char operationReply = 'f';
-//        int lengthReply = 0;
-//        int indiceReply = 0;
-//        byte[] dataReply;
         envia.writeChar(operationReply);
-        envia.writeInt(indiceReply);
         envia.writeInt(messageReply.length());
         envia.writeBytes(messageReply);
-
-//        return reply;
+        envia.flush();
     }
 
     private String seekContains(String title) {
@@ -132,14 +148,13 @@ public class ClientHandle {
             listDir += d.getTitle() + ";";
         }
         listDir = listDir.length() > 0 ? listDir.substring(0, listDir.length() - 1) : "";
-        System.out.println("Seek contains " + title + " -- " + (listDir.length() > 0 ? listDir : "Não encontrado"));
         return listDir;
     }
 
-    private String disconnect(String s) {
+    private String disconnect(String id) {
         ClientDAO clientDAO = new ClientDAO();
 
-        Client client = clientDAO.findById(Long.valueOf(s));
+        Client client = clientDAO.findById(Long.valueOf(id));
         DirectoryDAO directoryDAO = new DirectoryDAO();
 
         directoryDAO.deleteAllDirectoryByClient(client);
@@ -148,20 +163,21 @@ public class ClientHandle {
         return "OK";
     }
 
-    private String apply(String s) {  // s = meuIP:porta
+    private String apply(String porta) {  // s = meuIP:porta
         ClientDAO clientDAO = new ClientDAO();
-        /*
-         * Precisamos guardar o ip do cliente que foi recebido na conexão
-         * Porque num primeiro momento, o cliente não sabe exatamente o ip externo
-         * porém a porta de escuta é possivel obter
-         * */
-        Client client = clientDAO.findByAddress(s);
+
+        String clientPeer = String.format("%s:%s", clientIP, porta);
+
+        Client client = clientDAO.findByAddress(clientPeer);
 
         if (client == null) {
             client = new Client();
-            client.setAddress(s);
+            client.setAddress(clientPeer);
             client = clientDAO.insert(client);
         }
+
+        System.out.println("New client connected: " + clientIP);
+
         return String.valueOf(client.getId());
     }
 
@@ -170,15 +186,9 @@ public class ClientHandle {
         Directory dir;
         String clientList = "NULL";
         Long id = 0L;
-        System.out.println("seek id recebido: " + text_id);
 
-//        try {
         id = Long.valueOf(text_id);
         dir = dirDAO.findById(id);
-//        } catch (NullPointerException e) {
-//            System.out.println("Error seek: " + e.getMessage());
-//            return clientList;
-//        }
 
         List<Client> listClients = dirDAO.findAllClientsByDirectory(dir);
 
@@ -199,8 +209,6 @@ public class ClientHandle {
         String[] pacote;
         pacote = pacoteRecebido.split("[$]");
 
-        System.out.println(Arrays.toString(pacote));
-
         Long client_id;
         try {
             client_id = Long.valueOf(pacote[0]);
@@ -215,7 +223,6 @@ public class ClientHandle {
 
         if (client == null) return false;
 
-        System.out.println("Cliente: " + client.getId() + " Address: " + client.getAddress());
         Directory directory;
         Directory directoryTemp;
 
@@ -234,70 +241,27 @@ public class ClientHandle {
         for (String l : list) {
             String[] directoryTam = l.split(";");
 
-//            System.out.println(Arrays.toString(directoryTam));
             directory = new Directory();
             directory.setTitle(directoryTam[0]);
             directory.setSize(Long.valueOf(directoryTam[1]));
 
-            if (directoriesClient.indexOf(directory) == -1) {
+            if (!directoriesClient.contains(directory)) {
                 directoryTemp = directoryDAO.findByTitle(directoryTam[0]);
                 if (directoryTemp == null) {
 
                     directoryTemp = directoryDAO.insert(directory);
 
                     if (directoryTemp != null) return false;
-                    System.out.println("Directory Inserido: " + directory.getTitle());
                 }
                 listDirectory.add(directoryTemp);
             }
         }
 
-
         for (Directory d1 : listDirectory) {
             directoryDAO.insertClientDirectory(d1, client);
         }
-
         return true;
     }
 
-    private void tratarRequisicao(Socket connectionSocket) throws IOException, SQLException {
-        String clientSentence;
-        String capitalizedSentence;
-        System.out.println("IP externo do cliente: " + connectionSocket.getRemoteSocketAddress());
-//        BufferedReader inFromClient =
-//                new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-        DataInputStream recebe =
-                new DataInputStream(new BufferedInputStream(connectionSocket.getInputStream()));
 
-        DataOutputStream envia =
-                new DataOutputStream(connectionSocket.getOutputStream());
-
-        this.processRequest(recebe, envia);
-//        ByteArrayInputStream bos = new ByteArrayInputStream();
-
-//        StringBuilder dataString = new StringBuilder(length);
-//        clientSentence = dataString.append(messagem).toString();
-//        clientSentence = new String(messagem);
-//
-//        System.out.println(clientSentence);
-//        String clientSentenceResposta = clientSentence + " recebido!";
-//        outToClient.writeChar('r');
-//        outToClient.writeInt(clientSentenceResposta.length());
-//        outToClient.writeBytes(clientSentenceResposta);
-
-//        clientSentence = inFromClient.readLine();
-//
-//        capitalizedSentence = clientSentence.toUpperCase() + '\n';
-//
-//        String[] info = clientSentence.trim().split(";");
-//        String resp = "recusado";
-//        if (info.length > 1)
-//            resp = this.processar(info[0], info[1], info[2]);
-//
-//        System.out.println("Host: " + connectionSocket.getRemoteSocketAddress()
-//                + " Data: " + capitalizedSentence.trim()
-//                + " Tamanho: " + capitalizedSentence.length());
-//
-//        outToClient.writeBytes(resp + '\n');
-    }
 }
