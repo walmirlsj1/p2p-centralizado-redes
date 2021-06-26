@@ -20,7 +20,7 @@ public class ClientHandler implements Runnable {
     private final Socket connectionSocket;
     private String clientIP;
 
-    ClientHandler(Socket connectionSocket) {
+    public ClientHandler(Socket connectionSocket) {
         this.connectionSocket = connectionSocket;
     }
 

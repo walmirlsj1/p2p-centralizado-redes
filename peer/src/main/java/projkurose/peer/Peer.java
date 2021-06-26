@@ -4,14 +4,12 @@ import java.io.*;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.*;
-
-import org.apache.commons.configuration2.PropertiesConfiguration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import projkurose.core.FileManager;
-import projkurose.core.Config;
 import projkurose.peer.model.Shared;
 import projkurose.peer.model.SharedDAO;
-import projkurose.core.SQLiteJDBCDriverConnection;
 
 /**
  * Ideias
@@ -30,7 +28,6 @@ public class Peer {
     private final String serverIpDir;
     private Long clientId;
 
-
     private Socket clientSocket;
     private DataOutputStream send;
     private DataInputStream receive;
@@ -39,8 +36,10 @@ public class Peer {
 
     char type;
     int length = 0;
-    byte[] retornoSRV;
+    byte[] received;
 
+    protected ExecutorService threadPool =
+            Executors.newFixedThreadPool(20);
 
     public Peer(Long clientId, int clientSrvPort, String serverIpDir, int serverPortDir) {
         this.clientSrvPort = clientSrvPort; //6789
@@ -111,17 +110,15 @@ public class Peer {
 
             findServer();
 
-        } else if (op.equals("DEL") || op.equals("D")) { // FIND: Procura arquivo no server
-            /* @TODO falta implementar: deletar um item do compartilhamento */
-//            throw new Exception("Delete não implementado");
+        } else if (op.equals("DEL") || op.equals("D")) { // DEL: Para compartilhamento Peer
             deleteShareConsole();
+
         } else if (op.equals("EXIT") || op.equals("E")) {
             disconnectFromServerDirectory();
 
             flagContinue = this.started = false;
         }
 
-//        clientSocket.close();
         return flagContinue;
     }
 
@@ -153,7 +150,7 @@ public class Peer {
     private void applyServer() throws Exception {
         serverGo('a', String.valueOf(this.clientSrvPort));
 
-        String received = new String(retornoSRV);
+        String received = new String(this.received);
         try {
             this.clientId = Long.valueOf(received);
         } catch (Exception e) {
@@ -166,7 +163,11 @@ public class Peer {
         List<Shared> shares = new SharedDAO().findAll();
         if (shares.isEmpty()) return;
 
-//        clientId.toString() + "$" + share.getTitle() + ";" + share.getSize()|
+        /**
+         * Resposta do servidor:
+         * clientId$title;size()|title;size()|...title;size()
+         */
+
         String shareText = "";
         for (Shared share : shares) {
             shareText += String.format("%s;%d|", share.getTitle(), share.getSize());
@@ -177,14 +178,12 @@ public class Peer {
         String messagem = String.format("%d$%s", clientId, shareText);
 
         serverGo('r', messagem);
-
-        clientSocket.close();
     }
 
     private void disconnectFromServerDirectory() throws IOException {
         serverGo('d', String.valueOf(this.clientId));
 
-        String resposta = new String(retornoSRV);
+        String resposta = new String(received);
         System.out.println("Desconectado do servidor: " + resposta);
     }
 
@@ -195,21 +194,21 @@ public class Peer {
         Long id = -1L;
         while (id == -1L) {
             try {
-                System.out.println("****** Para voltar menu principal digite uma letra  ******\nInforme numero ID para requisitar download: ");
+                System.out.println("****** Para voltar menu principal digite uma letra  ******\n" +
+                        "Informe numero ID para requisitar download: ");
                 id = Long.valueOf(scanner.readLine());
-            } catch (IOException e) {
-//                System.out.println("Error getListPeerForDownload: " + e.getMessage());
-//                id = -999L;
+            } catch (NumberFormatException | IOException e) {
                 return;
             }
         }
-//        System.out.println("OPERATION GET: " + id);
-
         serverGo('s', String.valueOf(id));
 
-        String resposta = new String(retornoSRV);
-        System.out.println("resposta do servidor: " + resposta);
+        getFromServer(id, new String(received));
 
+    }
+
+    private void getFromServer(Long id, String clients) {
+        this.threadPool.execute(new PeerReceive(id, clients));
     }
 
     private void findServer() throws IOException {
@@ -227,29 +226,28 @@ public class Peer {
             }
         }
         serverGo('l', title);
-        if (this.type == 'n') {
-            System.out.println(new String(retornoSRV));
-            return;
-        }
 
-        String[] list = new String(retornoSRV).split(";");
-        String[] listHash;
-        if (list.length == 0) {
+        String[] list = new String(received).split(";");
+
+        if (list.length == 0 || this.type == 'n') {
             System.out.println("Titulo: " + title + " - Não foi encontrado no servidor");
             return;
         }
 
+        String[] listHash;
+
         for (String item : list) {
             listHash = item.split("[|]");
-            System.out.println(String.format("Id: %s Item: %s Seeds: %s", listHash[0], listHash[1], listHash[2]));
+            System.out.println(String.format("     Id: %s Item: %s Seeds: %s    ", listHash[0], listHash[1], listHash[2]));
         }
+
         getListPeerForDownload();
     }
 
     private void receiveFromServer() throws IOException {
         this.type = receive.readChar();
         this.length = receive.readInt();
-        this.retornoSRV = receive.readNBytes(length);
+        this.received = receive.readNBytes(length);
     }
 
 
@@ -259,52 +257,6 @@ public class Peer {
         send.writeBytes(message);          // data
         send.flush();
     }
-
-    private void processarDownload() {
-
-        /**
-         * conecta no servidor peer servidor e requisita download do arquivo xyz
-         */
-    }
-
-//    String respSrvDir = this.conectar(opProcessada, "localhost", 6543);
-//
-////            System.out.println("Resposta ServidorDir" + resposta);
-//
-//    String[] infoSrvDir = respSrvDir.trim().split(";");
-//
-//        System.out.println("Resposta ServidorDir OP: " + opProcessada + " resposta: " + respSrvDir);
-//
-//        if (infoSrvDir[0].equals("GET") && !infoSrvDir[2].equals("null")) {
-//        String[] hostP2P = infoSrvDir[2].split(":");
-//
-//        String opP2P = "GET;" + title + ";";
-//        try {
-//            String respP2P = this.conectar(opP2P, hostP2P[0], Integer.parseInt(hostP2P[1]));
-//
-//            System.out.println("Solicitei P2P OP: " + opP2P + " resposta: " + respP2P + " end: " + infoSrvDir[2]);
-//        } catch (Exception e) {
-//            System.out.println("Ocorreu um erro ao solicitar dados do client-serv: " + opP2P + " IP: " + hostP2P[0] + " PORTA: " + Integer.parseInt(hostP2P[1]));
-//        }
-//    } else if (infoSrvDir[0].equals("GET") && infoSrvDir[2].equals("null")) {
-//        System.out.println("***************\nPesquisa não encontrada no servidor de diretorios!\n***************");
-//    }
-
-//    private String processar(String operacao, String key) {
-////        "GET;" + msg + ";" + "127.0.0.1:6789"
-//        String temp = null;
-//        if (operacao.equals("FIND")) {
-//            temp = "FIND;" + key + ";" + "127.0.0.1:" + this.serverPortDir;
-//        } else if (operacao.equals("REG")) {
-//            temp = "REG;" + key + ";" + "127.0.0.1:" + this.clientSrvPort;
-//            Shared shared = this.registerShare();
-//            this.shareList.put(shared, key);//"diretorioXYZ" + (new Random().nextInt() * 10)
-//        } else if (operacao.equals("GET")) {
-//            temp = "GET;" + key + ";" + "127.0.0.1:" + this.clientSrvPort;
-//        }
-//
-//        return temp;
-//    }
 
     private Shared registerShareConsole() {
         BufferedReader in =
@@ -368,82 +320,7 @@ public class Peer {
         return dao.delete(id);
     }
 
-    private String conectar(String msg, String hostname, Integer port) throws IOException {
-        String sentence;
-        String respSrv;
-
-        Socket clientSocket = new Socket(hostname, port);//6543
-
-        DataOutputStream outToServer =
-                new DataOutputStream(clientSocket.getOutputStream());
-
-        DataInputStream inFromServer =
-                new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
-
-        String textoEnviado = "Ola mundo";
-
-        outToServer.writeChar('s');                 // operacao
-        outToServer.writeInt(textoEnviado.length());   // length
-        outToServer.writeBytes(textoEnviado);          // data
-
-        char type = inFromServer.readChar();
-        int length = inFromServer.readInt();
-        byte[] retornoSRV = inFromServer.readNBytes(length);
-
-        String resposta = new String(retornoSRV);
-        System.out.println("resposta do servidor: " + resposta);
-
-        clientSocket.close();
-        return "";
-    }
-
-    public ByteArrayOutputStream teste(String s) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(bos);
-        dos.writeByte(1);
-        dos.writeChars(s); //Diretório a ser listado
-        return bos;
-    }
-
     public void disconnect() throws Exception {
         if (started) this.processar("e");
-    }
-
-    public static void main(String[] args) throws Exception {
-
-        String serverIpDir;
-        int clientSrvPort, serverPortDir;
-        Long clientId;
-
-        try {
-            PropertiesConfiguration config = Config.getConfiguracao();
-            clientSrvPort = config.getInt("client_port"); //6789
-            clientId = config.getLong("client_id");
-
-            serverIpDir = config.getString("server_ip");
-            serverPortDir = config.getInt("server_port");
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            Config.deleteConfig();
-            throw new RuntimeException("Falha na configuração, tente novamente!");
-        }
-
-        String sql = "CREATE TABLE IF NOT EXISTS SHARED (" +
-                " ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                " TITLE VARCHAR(80), " +
-                " SHARED_PATH VARCHAR(255), " +
-                " SIZE_PATH INTEGER" +
-                ")";
-        System.out.println("******************** VERIFICANDO DATABASE ********************");
-
-        SQLiteJDBCDriverConnection.database = "./database.db";
-        SQLiteJDBCDriverConnection.checkDatabase(sql);
-
-        new Thread(new PeerSender(clientSrvPort)).start();
-
-        Peer cli = new Peer(clientId, clientSrvPort, serverIpDir, serverPortDir);
-        cli.run();
-        cli.disconnect();
-
     }
 }
