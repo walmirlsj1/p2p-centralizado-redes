@@ -104,9 +104,8 @@ public class DirectoryDAO {
         try {
             String sql = String.format(
                     "SELECT COUNT(*) as seeds " +
-                    " FROM DIRECTORY as d," +
-                    " CLIENT_DIRECTORY as cd " +
-                    " WHERE d.id==cd.directory_id AND d.id=%d", dir.getId());
+                    " FROM CLIENT_DIRECTORY as cd " +
+                    " WHERE cd.directory_id=%d", dir.getId());
 
             PreparedStatement query = con.prepareStatement(sql);
             ResultSet resultSet = query.executeQuery();
