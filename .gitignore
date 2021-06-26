@@ -1,9 +1,10 @@
 HELP.md
 target/
+**/target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**
 !**/src/test/**
-
+**/out/
 ### STS ###
 .apt_generated
 .classpath
@@ -16,7 +17,7 @@ target/
 ### IntelliJ IDEA ###
 .idea
 *.iws
-*.iml
+**.iml
 *.ipr
 
 ### NetBeans ###
@@ -29,3 +30,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+***.db
+***.properties
