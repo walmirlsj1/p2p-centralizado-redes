@@ -1,4 +1,4 @@
-package server.model;
+package projkurose.server.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

@@ -1,4 +1,4 @@
-package model;
+package projkurose.peer.model;
 
 import projkurose.core.FileManager;
 

@@ -1,5 +1,6 @@
+package projkurose.peer;
+
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.*;
@@ -8,8 +9,8 @@ import org.apache.commons.configuration2.PropertiesConfiguration;
 
 import projkurose.core.FileManager;
 import projkurose.core.Config;
-import model.Shared;
-import model.SharedDAO;
+import projkurose.peer.model.Shared;
+import projkurose.peer.model.SharedDAO;
 import projkurose.core.SQLiteJDBCDriverConnection;
 
 /**
@@ -23,9 +24,10 @@ import projkurose.core.SQLiteJDBCDriverConnection;
 
 public class Peer {
 
-    private Integer clientSrvPort, serverPortDir;
+    private final Integer clientSrvPort;
+    private final Integer serverPortDir;
 
-    private String serverIpDir;
+    private final String serverIpDir;
     private Long clientId;
 
 
@@ -52,63 +54,7 @@ public class Peer {
         register();
 
         this.started = true;
-        this.startThreadSrv();
         this.startClient();
-    }
-
-    private void startThreadSrv() {
-        Runnable threadSrv = () -> {
-            try {
-                System.out.println("Iniciando Servidor Local porta: " + clientSrvPort);
-                serverStart();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        };
-        new Thread(threadSrv).start();
-    }
-
-    private void serverStart() throws IOException {
-        String clientSentence;
-        String capitalizedSentence;
-
-        ServerSocket server = new ServerSocket(this.clientSrvPort);
-
-        while (true) {
-            /**
-             * Da forma que está atende um cliente por vez
-             * seria interessante ter um spool de thread:? e tratar cliente em thread separadas
-             * ex. 16 clientes de uma vez
-             *
-             */
-            Socket cliente = server.accept();
-
-            BufferedReader inFromClient =
-                    new BufferedReader(new InputStreamReader(cliente.getInputStream()));
-
-            DataOutputStream outToClient =
-                    new DataOutputStream(cliente.getOutputStream());
-
-            clientSentence = inFromClient.readLine();
-
-            String[] infoSrvDir = clientSentence.trim().split(";");
-
-            System.out.println("Cliente solicita: " + infoSrvDir[0]);
-            String respP2P = "Falha na requisição";
-            if (infoSrvDir[0].equals("GET")) {
-
-//                respP2P = this.shareList.get(infoSrvDir[1]);
-
-            }
-            capitalizedSentence = respP2P + '\n';
-
-            System.out.println("Data: " + capitalizedSentence.trim() +
-                    " Tamanho: " + capitalizedSentence.length());
-
-            outToClient.writeBytes(capitalizedSentence);
-
-            cliente.close();
-        }
     }
 
     private void startClient() throws Exception {
@@ -125,13 +71,13 @@ public class Peer {
         BufferedReader inFromUser =
                 new BufferedReader(new InputStreamReader(System.in));
 
-        System.out.println("===== Lista das operações possiveis ========");
-        System.out.println("===  (R)EG: Registra Arquivo/Pasta       ===");
-        System.out.println("===  (G)ET: Solicita Download do arquivo ===");
-        System.out.println("=== (F)IND: Procura arquivo no server    ===");
-        System.out.println("===  (D)EL: Remove um item compartilhado ===");
-        System.out.println("=== (E)XIT: Para sair                    ===");
-        System.out.println("============================================");
+        System.out.println("===== Lista das operações possiveis ============");
+        System.out.println("===  (R)EG: Registra Arquivo/Pasta           ===");
+//      System.out.println("===  (G)ET: Solicita Download do arquivo     ===");
+        System.out.println("=== (F)IND: Procura/Baixar arquivo no server ===");
+        System.out.println("===  (D)EL: Remove um item compartilhado     ===");
+        System.out.println("=== (E)XIT: Para sair                        ===");
+        System.out.println("================================================");
         System.out.println("Informe OP: GET/FIND/REG");
         String op = inFromUser.readLine();
 
@@ -158,15 +104,17 @@ public class Peer {
             /* @FIXME Estamos enviando todos os items compartilhados, pra adiantar */
             registerShareServer();
 
-        } else if (op.equals("GET") || op.equals("G")) {  // GET: Solicita Download do arquivo
-            getListPeerForDownload();
+//        } else if (op.equals("GET") || op.equals("G")) {  // GET: Solicita Download do arquivo
+//            getListPeerForDownload();
 
         } else if (op.equals("FIND") || op.equals("F")) { // FIND: Procura arquivo no server
+
             findServer();
+
         } else if (op.equals("DEL") || op.equals("D")) { // FIND: Procura arquivo no server
             /* @TODO falta implementar: deletar um item do compartilhamento */
-            throw new Exception("Delete não implementado");
-
+//            throw new Exception("Delete não implementado");
+            deleteShareConsole();
         } else if (op.equals("EXIT") || op.equals("E")) {
             disconnectFromServerDirectory();
 
@@ -193,46 +141,6 @@ public class Peer {
         clientSocket.close();
     }
 
-    private void getConnectionClientServer(String hostname, int port, String path) throws IOException {
-        FileManager fr = new FileManager();
-
-
-        Socket clientSocket = new Socket(hostname, port);//6543
-        String ipAddressSrv = clientSocket.getLocalAddress().getHostAddress();
-        DataOutputStream sendSrv = new DataOutputStream(clientSocket.getOutputStream());
-        DataInputStream receiveSrv = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
-
-        List<String> loadFileList = fr.loadFileList(path);
-//        for (String s : loadFileList) {
-//            fr.sendFileDir(new File(s), sendSrv);
-//        }
-        /**
-         *
-         * 1 - enviar a lista de arquivos para download
-         * 2 - enviar tamanho total sera salvo em um zip para teste
-         * 3 - enviar arquivo e indice da ultima posicao enviada
-         * 4 - client vai ler o arquivo e guardar o indice, e o ultimo arquivo enviado
-         * 5 - enviar um informação como fim de conexao
-         * Apartir do momento que o cliente tem esse arquivo, ou parte dele
-         * seria interessante o cliente compartilhar essa informação
-         * mais vamos só fazer funcionar por enquanto.
-         */
-        /**
-         * while(count<total){
-         *      part = byte[16*1024] //
-         *      append[part] in file
-         *      count++;
-         * }
-         *
-         */
-        /* @TODO falta implementar 1!!!*/
-
-        this.type = receive.readChar();
-        this.length = receive.readInt();
-        this.retornoSRV = receive.readNBytes(length);
-
-    }
-
     private void init() throws Exception {
         applyServer();
     }
@@ -244,10 +152,6 @@ public class Peer {
 
     private void applyServer() throws Exception {
         serverGo('a', String.valueOf(this.clientSrvPort));
-//        getConnectionServerDir();
-//        this.sendServer('a', String.valueOf(this.clientSrvPort));
-//        this.receiveFromServer();
-//        clientSocket.close();
 
         String received = new String(retornoSRV);
         try {
@@ -255,19 +159,19 @@ public class Peer {
         } catch (Exception e) {
             throw new Exception("Não foi possivel registrar cliente no servidor");
         }
-        System.out.println("Meu ID: " + this.clientId);
+        System.out.println("Cliente registrado no servidor");
     }
 
     private void registerShareServer() throws SQLException, IOException {
         List<Shared> shares = new SharedDAO().findAll();
         if (shares.isEmpty()) return;
 
-//        clientId.toString() + "$" + share.getTitle() + ";" + share.getSize()
+//        clientId.toString() + "$" + share.getTitle() + ";" + share.getSize()|
         String shareText = "";
         for (Shared share : shares) {
             shareText += String.format("%s;%d|", share.getTitle(), share.getSize());
         }
-        System.out.println("Lista vazia: " + shares.isEmpty());
+
         shareText = shareText.substring(0, shareText.length() - 1);
 
         String messagem = String.format("%d$%s", clientId, shareText);
@@ -291,11 +195,12 @@ public class Peer {
         Long id = -1L;
         while (id == -1L) {
             try {
-                System.out.println("Informe o ID para requisitar download: ");
+                System.out.println("****** Para voltar menu principal digite uma letra  ******\nInforme numero ID para requisitar download: ");
                 id = Long.valueOf(scanner.readLine());
             } catch (IOException e) {
-                System.out.println("Error getListPeerForDownload: " + e.getMessage());
-                id = -1L;
+//                System.out.println("Error getListPeerForDownload: " + e.getMessage());
+//                id = -999L;
+                return;
             }
         }
 //        System.out.println("OPERATION GET: " + id);
@@ -311,6 +216,7 @@ public class Peer {
         BufferedReader scanner =
                 new BufferedReader(new InputStreamReader(System.in));
         String title = "";
+
         while (title.equals("")) {
             try {
                 System.out.println("Informe um titulo para pesquisa");
@@ -321,7 +227,7 @@ public class Peer {
             }
         }
         serverGo('l', title);
-        if(this.type == 'n') {
+        if (this.type == 'n') {
             System.out.println(new String(retornoSRV));
             return;
         }
@@ -335,8 +241,9 @@ public class Peer {
 
         for (String item : list) {
             listHash = item.split("[|]");
-            System.out.println(String.format("Id: %s Item: %s Seeds: %s",listHash[0], listHash[1], listHash[2]));
+            System.out.println(String.format("Id: %s Item: %s Seeds: %s", listHash[0], listHash[1], listHash[2]));
         }
+        getListPeerForDownload();
     }
 
     private void receiveFromServer() throws IOException {
@@ -433,15 +340,26 @@ public class Peer {
 
     }
 
-    private void deleteShareConsole() {
+    private void deleteShareConsole() throws SQLException {
         BufferedReader in =
                 new BufferedReader(new InputStreamReader(System.in));
+
+        SharedDAO dao = new SharedDAO();
+        List<Shared> shared = dao.findAll();
+        if (shared.isEmpty()) {
+            System.out.println("Não a arquivos ou pastas compartilhados");
+            return;
+        }
+
+        for (Shared s : shared) {
+            System.out.println(String.format("Id: %d - Title: %s - Size: %d", s.getId(), s.getTitle(), s.getSize()));
+        }
 
         try {
             Long id = Long.valueOf(in.readLine());
             deleteShare(id);
         } catch (IOException e) {
-            System.out.println("registerShareConsole: Error I/O");
+            System.out.println("deleteShareConsole: Error I/O");
         }
     }
 
@@ -510,7 +428,18 @@ public class Peer {
             throw new RuntimeException("Falha na configuração, tente novamente!");
         }
 
-        SQLiteJDBCDriverConnection.geraDB();
+        String sql = "CREATE TABLE IF NOT EXISTS SHARED (" +
+                " ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                " TITLE VARCHAR(80), " +
+                " SHARED_PATH VARCHAR(255), " +
+                " SIZE_PATH INTEGER" +
+                ")";
+        System.out.println("******************** VERIFICANDO DATABASE ********************");
+
+        SQLiteJDBCDriverConnection.database = "./database.db";
+        SQLiteJDBCDriverConnection.checkDatabase(sql);
+
+        new Thread(new PeerSender(clientSrvPort)).start();
 
         Peer cli = new Peer(clientId, clientSrvPort, serverIpDir, serverPortDir);
         cli.run();

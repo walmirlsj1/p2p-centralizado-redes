@@ -1,17 +1,17 @@
-package server.model;
-
-import projkurose.core.SQLiteJSrv;
+package projkurose.server.model;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+
+import projkurose.core.SQLiteJDBCDriverConnection;
 
 public class DirectoryDAO {
     Connection con;
     private boolean debug = false;
 
     public DirectoryDAO() {
-        this.con = SQLiteJSrv.getConnection();
+        this.con = SQLiteJDBCDriverConnection.getConnection();
     }
 
     public Directory insert(Directory directory) {
@@ -69,11 +69,8 @@ public class DirectoryDAO {
 
             ResultSet resultSet = query.executeQuery();
 
-            if (resultSet.next()) {
-                return resultSetToDirectory(resultSet);
-            } else {
-                System.out.println("Não tem proximo");
-            }
+            if (resultSet.next()) return resultSetToDirectory(resultSet);
+
         } catch (SQLException e) {
             System.out.println("Error findById: " + e.getMessage());
         }
@@ -88,8 +85,8 @@ public class DirectoryDAO {
 
             ResultSet resultSet = query.executeQuery();
 
-            if (resultSet.next())
-                return resultSetToDirectory(resultSet);
+            if (resultSet.next()) return resultSetToDirectory(resultSet);
+
         } catch (SQLException e) {
             System.out.println("Error findByTitle: " + e.getMessage());
         }
@@ -104,8 +101,8 @@ public class DirectoryDAO {
         try {
             String sql = String.format(
                     "SELECT COUNT(*) as seeds " +
-                    " FROM CLIENT_DIRECTORY as cd " +
-                    " WHERE cd.directory_id=%d", dir.getId());
+                            " FROM CLIENT_DIRECTORY as cd " +
+                            " WHERE cd.directory_id=%d", dir.getId());
 
             PreparedStatement query = con.prepareStatement(sql);
             ResultSet resultSet = query.executeQuery();

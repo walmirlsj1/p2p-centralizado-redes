@@ -1,4 +1,4 @@
-package server;
+package projkurose.server;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -9,10 +9,11 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-import server.model.Client;
-import server.model.ClientDAO;
-import server.model.Directory;
-import server.model.DirectoryDAO;
+import org.apache.commons.lang3.NotImplementedException;
+import projkurose.server.model.ClientDAO;
+import projkurose.server.model.DirectoryDAO;
+import projkurose.server.model.Client;
+import projkurose.server.model.Directory;
 
 
 public class ClientHandler implements Runnable {
@@ -62,13 +63,13 @@ public class ClientHandler implements Runnable {
         /**
          * ~~~~~~~~~~~ SERVER ~~~~~~~~~~~
          * (s)eek         : share from clients
-         * (n)ew          : seek client-serv offline
          * (r)egister     : share list need client_id*
          * (a)ply         : generate client_id* para client-serv
          * (d)isconnect   : from server need client_id*
          * (e)rror        : request
          * (o)K           : OK
          * (l)ist         : list all share or contains key*
+         * dele(t)e       :
          *
          * preciso do client_id...pra evitar duplicidade
          * e uma rotina para limpar clientes offline
@@ -96,10 +97,9 @@ public class ClientHandler implements Runnable {
                 } else operationReply = 'l';
 
                 break;
-            case 'n': // cliente não responde a solicitação
-                System.out.println("New seek serverClient offline " + clientIP);
-                /* @TODO falta implementar */
-
+            case 't': // cliente não responde a solicitação
+                System.out.println("Delete client share " + clientIP);
+                deleteClientShare(data);
                 break;
             case 'r':
                 System.out.println("Register shareds in server: " + clientIP);
@@ -138,6 +138,15 @@ public class ClientHandler implements Runnable {
         envia.writeInt(messageReply.length());
         envia.writeBytes(messageReply);
         envia.flush();
+    }
+
+    private void deleteClientShare(String s) {
+        throw new NotImplementedException("Não implementado");
+        /**
+         * usar o hashcode para deletar?
+         * mudar table para guardar hash, e titulo
+         * @FIXME
+         */
     }
 
     private String seekContains(String title) {

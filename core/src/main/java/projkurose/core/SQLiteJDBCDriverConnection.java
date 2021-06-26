@@ -7,19 +7,11 @@ import java.sql.*;
 public class SQLiteJDBCDriverConnection {
     public static Connection con = null;
     public static Statement stm = null;
+    public static String database = "./database.db";
 
-    public static void geraDB() throws SQLException {
-        Connection con = getConnection();
-        Statement stmt = con.createStatement();
-
-        System.out.println("******************** CREATE TABLE SHARED ********************");
-        stmt.execute("CREATE TABLE IF NOT EXISTS SHARED (" +
-                " ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                " TITLE VARCHAR(80), " +
-                " SHARED_PATH VARCHAR(255), " +
-                " SIZE_PATH INTEGER" +
-                ")"
-        );
+    public static void checkDatabase(String sql) throws SQLException {
+        Statement stmt = getConnection().createStatement();
+        stmt.execute(sql);
     }
 
     public static Connection getConnection() {
@@ -28,7 +20,6 @@ public class SQLiteJDBCDriverConnection {
                 return con;
 //                con.close();
             }
-            String database = "./database.db";
 
             checkDbPath(database);
 

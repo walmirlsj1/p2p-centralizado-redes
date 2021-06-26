@@ -1,6 +1,6 @@
-package server.model;
+package projkurose.server.model;
 
-import projkurose.core.SQLiteJSrv;
+import projkurose.core.SQLiteJDBCDriverConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -11,7 +11,7 @@ public class ClientDAO {
     private boolean debug = false;
 
     public ClientDAO() {
-        this.con = SQLiteJSrv.getConnection();
+        this.con = SQLiteJDBCDriverConnection.getConnection();
     }
 
     public Client insert(Client client) {
@@ -25,8 +25,6 @@ public class ClientDAO {
             stmt.execute(sql_insert);
 
             client.setId(this.getLastId());
-
-            System.out.println(client.toString());
             return client;
         } catch (SQLException e) {
             System.out.println("Error insert: " + e.getMessage());

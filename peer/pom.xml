@@ -14,7 +14,7 @@
     </properties>
 
     <build>
-        <finalName>Peer</finalName>
+        <finalName>projkurose.peer.Peer</finalName>
         <resources>
             <resource>
                 <directory>../src/main/resources</directory>
