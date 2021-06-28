@@ -13,7 +13,7 @@
         <maven.compiler.target>11</maven.compiler.target>
     </properties>
     <build>
-        <finalName>Server</finalName>
+        <finalName>projkurose.server.Main</finalName>
         <resources>
             <resource>
                 <directory>../src/main/resources</directory>

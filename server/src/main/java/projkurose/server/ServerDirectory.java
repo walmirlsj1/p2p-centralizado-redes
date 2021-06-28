@@ -12,7 +12,7 @@ public class ServerDirectory extends Server {
 
     @Override
     protected Runnable getRunnable(Socket client){
-        return new ClientHandler(client);
+        return new ClientHandle(client);
     }
 
 }

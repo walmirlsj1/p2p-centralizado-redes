@@ -1,5 +1,6 @@
 package projkurose.peer;
 
+import lombok.SneakyThrows;
 import projkurose.core.Server;
 
 import java.net.Socket;
@@ -12,7 +13,7 @@ public class PeerServer extends Server implements Runnable {
 
     @Override
     protected Runnable getRunnable(Socket client) {
-        return new PeerHandlerSender(client);
+        return new FileTransferServer(client);
     }
 
     @Override

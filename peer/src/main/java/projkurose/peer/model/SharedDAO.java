@@ -78,7 +78,7 @@ public class SharedDAO {
         throw new Exception("Não implementado");
     }
 
-    public List<Shared> findAll() throws SQLException {
+    public List<Shared> findAll() {
         try(PreparedStatement query = con.prepareStatement("select * from SHARED")){
             ResultSet resultSet = query.executeQuery();
             return convertListShared(resultSet);

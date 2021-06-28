@@ -1,20 +1,17 @@
 package projkurose.core;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.channels.FileChannel;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class FileManager {
 
-    public void saveFile(String path, String filename, String operacao, String filePackate) {
+    public static void saveFile(String path, String filename, String operacao, String filePackate) {
         File file = new File(path + "/" + filename);
         // Escrever no arquivo e salvar.
     }
@@ -26,14 +23,14 @@ public class FileManager {
         throw new IOException("Arquivo ou diretorio não existe");
     }
 
-    public File findFile(String path) {
+    public static File findFile(String path) {
         File file = new File(path);
         if (file.isFile())
             return file;
         return null;
     }
 
-    private List<String> findFolder(String path_folder) throws IOException {
+    private static List<String> findFolder(String path_folder) throws IOException {
         File directory = new File(path_folder);
         if (directory.isDirectory()) {
             return loadFileList(path_folder);
@@ -46,20 +43,18 @@ public class FileManager {
         return null;
     }
 
-    public List<String> loadFileList(String path_folder) {
+    public static List<String> loadFileList(String path_folder) {
+
         try (Stream<Path> walk = Files.walk(Paths.get(path_folder))) {
-            List<String> result = walk.filter(Files::isRegularFile).map(x -> x.toString())
+            List<String> result = walk.filter(Files::isRegularFile)
+                    .map(x -> x.toString().replaceFirst(path_folder, ""))
                     .collect(Collectors.toList());
 
-            // result.forEach(System.out::println);
-            if (!result.isEmpty()) {
-//            return true;
-                throw new IOException("Erro a pasta Vazia! " + path_folder);
-            }
+//            result.forEach(System.out::println);
             return result;
         } catch (IOException e) {
             System.out.println(e.getMessage());
-            return null;
+            return new ArrayList<>();
         }
     }
 
@@ -88,23 +83,76 @@ public class FileManager {
         return size;
     }
 
-    public void sendFileDir(File source, File destination) throws IOException {
-        if (destination.exists())
-            destination.delete();
+    public static void sendFileDir(DataInputStream receive, DataOutputStream send, String path_dir, String filename) throws IOException {
+//        if (destination.exists())
+//            destination.delete();
+        File file_sender = null;
+        file_sender = new File(path_dir + filename);
 
-        FileChannel sourceChannel = null;
-        FileChannel destinationChannel = null;
+        send.writeInt(filename.length());
+        send.writeBytes(filename);
+        send.writeLong(file_sender.length());
 
-        try {
-            sourceChannel = new FileInputStream(source).getChannel();
-            destinationChannel = new FileOutputStream(destination).getChannel();
-            sourceChannel.transferTo(0, sourceChannel.size(), destinationChannel);
-        } finally {
-            if (sourceChannel != null && sourceChannel.isOpen())
-                sourceChannel.close();
-            if (destinationChannel != null && destinationChannel.isOpen())
-                destinationChannel.close();
+        if (receive.readChar() == 'c') return; // arquivo já esta no cliente (c)ompleto
+        try (
+                InputStream inputStream = new FileInputStream(file_sender);
+        ) {
+
+            byte[] buffer = new byte[4096];
+            int bytesRead = -1;
+
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                send.write(buffer, 0, bytesRead);
+            }
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
+    }
+
+    public static void receiveFileDir(DataInputStream receive, DataOutputStream send, String path_dir) throws IOException {
+
+        int fileNameLength = receive.readInt();
+
+        String filename = new String(receive.readNBytes(fileNameLength));
+
+        long fileSize = receive.readLong();
+
+        File destination = new File(path_dir + filename);
+
+        String pathFile = destination.getAbsolutePath();
+
+        pathFile = pathFile.substring(0, pathFile.length() - destination.getName().length());
+
+        File dir = new File(pathFile);
+
+        if (!dir.exists()) dir.mkdirs();
+
+        if (!destination.exists()) destination.createNewFile();
+        else if (destination.length() == fileSize) {
+            send.writeChar('c');
+            /* envia ao servidor que client já possui este arquivo baixado completamente */
+            return;
+        }
+        send.writeChar('n'); /* autoriza sevidor a enviar arquivo */
+
+        try (
+                OutputStream outputStream = new FileOutputStream(destination);
+        ) {
+
+            byte[] buffer = new byte[4096];
+            int bytesRead = -1;
+            long count = 0l;
+            Long remainingBytes = fileSize;
+
+            while (remainingBytes > 0 && (bytesRead = receive.read(buffer, 0, (int) Math.min(buffer.length, remainingBytes))) > 0) {
+                outputStream.write(buffer, 0, bytesRead);
+                remainingBytes -= bytesRead;
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
     }
 }
 

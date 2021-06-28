@@ -1,11 +1,7 @@
 package projkurose.peer;
 
 import java.io.*;
-import java.net.Socket;
-import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import projkurose.core.FileManager;
 import projkurose.peer.model.Shared;
@@ -20,52 +16,23 @@ import projkurose.peer.model.SharedDAO;
  * salvar progresso do donwload, para que não corromper o arquivo.!!
  */
 
-public class Peer {
+public class ConsoleGUI {
+    ServerHandle client;
 
-    private final Integer clientSrvPort;
-    private final Integer serverPortDir;
-
-    private final String serverIpDir;
-    private Long clientId;
-
-    private Socket clientSocket;
-    private DataOutputStream send;
-    private DataInputStream receive;
-
-    private boolean started = false;
-
-    char type;
-    int length = 0;
-    byte[] received;
-
-    protected ExecutorService threadPool =
-            Executors.newFixedThreadPool(20);
-
-    public Peer(Long clientId, int clientSrvPort, String serverIpDir, int serverPortDir) {
-        this.clientSrvPort = clientSrvPort; //6789
-        this.clientId = clientId;
-        this.serverIpDir = serverIpDir;
-        this.serverPortDir = serverPortDir;
+    public ConsoleGUI(Long clientId, int clientSrvPort, String serverIpDir, int serverPortDir) throws IOException {
+        client = new ServerHandle(clientId, clientSrvPort, serverIpDir, serverPortDir);
+        client.registerShareServer(new SharedDAO().findAll());
     }
 
-    public void run() throws Exception {
-        init();
-        register();
-
-        this.started = true;
-        this.startClient();
-    }
-
-    private void startClient() throws Exception {
+    public void run() throws IOException {
         System.out.println("Iniciando Cliente");
         boolean flagContinue = true;
         while (flagContinue) {
             flagContinue = clientConsole();
         }
-        System.exit(0);
     }
 
-    private boolean clientConsole() throws Exception {
+    private boolean clientConsole() throws IOException {
 
         BufferedReader inFromUser =
                 new BufferedReader(new InputStreamReader(System.in));
@@ -84,7 +51,7 @@ public class Peer {
         return this.processar(op.toUpperCase(Locale.ROOT));
     }
 
-    private boolean processar(String op) throws Exception {
+    private boolean processar(String op) throws IOException {
         /**
          *          * (s)eek         : share from clients
          *          * (n)ew          : seek client-serv offline
@@ -101,117 +68,57 @@ public class Peer {
         if (op.equals("REG") || op.equals("R")) {
             registerShareConsole();
             /* @FIXME Estamos enviando todos os items compartilhados, pra adiantar */
-            registerShareServer();
+
 
 //        } else if (op.equals("GET") || op.equals("G")) {  // GET: Solicita Download do arquivo
 //            getListPeerForDownload();
 
         } else if (op.equals("FIND") || op.equals("F")) { // FIND: Procura arquivo no server
+            findServerConsole();
 
-            findServer();
-
-        } else if (op.equals("DEL") || op.equals("D")) { // DEL: Para compartilhamento Peer
+        } else if (op.equals("DEL") || op.equals("D")) { // DEL: Para compartilhamento ConsoleGUI
             deleteShareConsole();
 
         } else if (op.equals("EXIT") || op.equals("E")) {
-            disconnectFromServerDirectory();
+            disconnect();
 
-            flagContinue = this.started = false;
+            flagContinue = false;
         }
 
         return flagContinue;
     }
 
-    private void serverGo(char op, String message) throws IOException {
-        try {
-            clientSocket = new Socket(this.serverIpDir, this.serverPortDir);//6543
-        } catch (IOException e) {
-            System.out.println("Server offline");
-            System.exit(0);
-        }
-        this.send = new DataOutputStream(clientSocket.getOutputStream());
-        this.receive = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
-
-        this.sendServer(op, message);
-        this.receiveFromServer();
-
-        clientSocket.close();
-    }
-
-    private void init() throws Exception {
-        applyServer();
-    }
-
-    private void register() throws SQLException, IOException {
-        registerShareServer();
-    }
-
-
-    private void applyServer() throws Exception {
-        serverGo('a', String.valueOf(this.clientSrvPort));
-
-        String received = new String(this.received);
-        try {
-            this.clientId = Long.valueOf(received);
-        } catch (Exception e) {
-            throw new Exception("Não foi possivel registrar cliente no servidor");
-        }
-        System.out.println("Cliente registrado no servidor");
-    }
-
-    private void registerShareServer() throws SQLException, IOException {
-        List<Shared> shares = new SharedDAO().findAll();
-        if (shares.isEmpty()) return;
-
-        /**
-         * Resposta do servidor:
-         * clientId$title;size()|title;size()|...title;size()
-         */
-
-        String shareText = "";
-        for (Shared share : shares) {
-            shareText += String.format("%s;%d|", share.getTitle(), share.getSize());
-        }
-
-        shareText = shareText.substring(0, shareText.length() - 1);
-
-        String messagem = String.format("%d$%s", clientId, shareText);
-
-        serverGo('r', messagem);
-    }
-
-    private void disconnectFromServerDirectory() throws IOException {
-        serverGo('d', String.valueOf(this.clientId));
-
-        String resposta = new String(received);
-        System.out.println("Desconectado do servidor: " + resposta);
-    }
-
-    private void getListPeerForDownload() throws IOException {
+    private void getListPeerForDownloadConsole() throws IOException {
         BufferedReader scanner =
                 new BufferedReader(new InputStreamReader(System.in));
 
         Long id = -1L;
+        String path_dir = "";
+
         while (id == -1L) {
             try {
                 System.out.println("****** Para voltar menu principal digite uma letra  ******\n" +
                         "Informe numero ID para requisitar download: ");
                 id = Long.valueOf(scanner.readLine());
+
             } catch (NumberFormatException | IOException e) {
                 return;
             }
         }
-        serverGo('s', String.valueOf(id));
+        while (path_dir.length() == 0) {
+            try {
+                System.out.println("Informe diretorio para salvar download: ");
+                path_dir = String.valueOf(scanner.readLine());
+            } catch (IOException e) {
+                return;
+            }
+        }
 
-        getFromServer(id, new String(received));
-
+        if (!client.getFromServer(id, path_dir)) System.out.println(String.format("ID: %d - não encontrado!", id));
     }
 
-    private void getFromServer(Long id, String clients) {
-        this.threadPool.execute(new PeerReceive(id, clients));
-    }
 
-    private void findServer() throws IOException {
+    private void findServerConsole() throws IOException {
         BufferedReader scanner =
                 new BufferedReader(new InputStreamReader(System.in));
         String title = "";
@@ -222,16 +129,11 @@ public class Peer {
                 title = scanner.readLine();
             } catch (IOException e) {
                 System.out.println("Error getListPeerForDownload: " + e.getMessage());
-                title = "";
             }
         }
-        serverGo('l', title);
-
-        String[] list = new String(received).split(";");
-
-        if (list.length == 0 || this.type == 'n') {
+        String[] list = client.findTitleServer(title);
+        if (list == null || list.length == 0) {
             System.out.println("Titulo: " + title + " - Não foi encontrado no servidor");
-            return;
         }
 
         String[] listHash;
@@ -240,25 +142,11 @@ public class Peer {
             listHash = item.split("[|]");
             System.out.println(String.format("     Id: %s Item: %s Seeds: %s    ", listHash[0], listHash[1], listHash[2]));
         }
+        getListPeerForDownloadConsole();
 
-        getListPeerForDownload();
     }
 
-    private void receiveFromServer() throws IOException {
-        this.type = receive.readChar();
-        this.length = receive.readInt();
-        this.received = receive.readNBytes(length);
-    }
-
-
-    private void sendServer(char op, String message) throws IOException {
-        send.writeChar(op);                 // operacao
-        send.writeInt(message.length());   // length
-        send.writeBytes(message);          // data
-        send.flush();
-    }
-
-    private Shared registerShareConsole() {
+    private void registerShareConsole() {
         BufferedReader in =
                 new BufferedReader(new InputStreamReader(System.in));
 
@@ -273,28 +161,18 @@ public class Peer {
                 file = new File(directory);
                 title = file.getName();
             } while (!file.exists());
+            Shared shared = registerShare(title, directory);
+            if (shared != null) client.registerShareServer(shared);
 
-            return registerShare(title, directory);
         } catch (IOException e) {
             System.out.println("registerShareConsole: Error I/O");
         }
-        return null;
     }
 
-    private Shared registerShare(String title, String directory) {
-
-        Long size = FileManager.getSizeFolder(directory);
-
-        Shared shared = new Shared(0L, title, directory, size);
-        SharedDAO dao = new SharedDAO();
-
-        return dao.insert(shared);
-
-    }
-
-    private void deleteShareConsole() throws SQLException {
+    private void deleteShareConsole() {
         BufferedReader in =
                 new BufferedReader(new InputStreamReader(System.in));
+
 
         SharedDAO dao = new SharedDAO();
         List<Shared> shared = dao.findAll();
@@ -315,12 +193,24 @@ public class Peer {
         }
     }
 
-    private boolean deleteShare(Long id) {
+    public void disconnect() throws IOException {
+        client.disconnectFromServerDirectory();
+    }
+
+    public Shared registerShare(String title, String directory) {
+
+        Long size = FileManager.getSizeFolder(directory);
+
+        Shared shared = new Shared(0L, title, directory, size);
+        SharedDAO dao = new SharedDAO();
+
+        return dao.insert(shared);
+
+    }
+
+    public boolean deleteShare(Long id) {
         SharedDAO dao = new SharedDAO();
         return dao.delete(id);
     }
 
-    public void disconnect() throws Exception {
-        if (started) this.processar("e");
-    }
 }

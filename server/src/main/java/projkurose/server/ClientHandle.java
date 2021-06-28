@@ -16,11 +16,11 @@ import projkurose.server.model.Client;
 import projkurose.server.model.Directory;
 
 
-public class ClientHandler implements Runnable {
+public class ClientHandle implements Runnable {
     private final Socket connectionSocket;
     private String clientIP;
 
-    public ClientHandler(Socket connectionSocket) {
+    public ClientHandle(Socket connectionSocket) {
         this.connectionSocket = connectionSocket;
     }
 
@@ -91,7 +91,7 @@ public class ClientHandler implements Runnable {
 
                 messageReply = seek(data);
 
-                if (messageReply.equals("NULL")) {
+                if (messageReply.length() == 0) {
                     operationReply = 'n';
                     messageReply = "Not found in shared list";
                 } else operationReply = 'l';
@@ -197,11 +197,13 @@ public class ClientHandler implements Runnable {
     private String seek(String text_id) {
         DirectoryDAO dirDAO = new DirectoryDAO();
         Directory dir;
-        String clientList = "NULL";
+        String clientList = "";
         Long id = 0L;
 
         id = Long.valueOf(text_id);
         dir = dirDAO.findById(id);
+
+        if(dir == null) return clientList;
 
         List<Client> listClients = dirDAO.findAllClientsByDirectory(dir);
 
