@@ -215,7 +215,7 @@ public class ClientHandle implements Runnable {
             clientList = clientList.substring(0, clientList.length() - 1); // remove ultimo ';'
         }
 
-        return dir.hashCode() + "|" + clientList;
+        return dir.getTitle() + "|" + clientList;
     }
 
     private boolean register(String pacoteRecebido) {

@@ -1,10 +1,13 @@
 package projkurose.peer.model;
 
+import projkurose.core.FileManager;
 import projkurose.core.SQLiteJDBCDriverConnection;
 
+import java.io.File;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 
 public class SharedDAO {
     Connection con;
@@ -109,4 +112,28 @@ public class SharedDAO {
         return new Shared(id, title, path, size);
     }
 
+    public Shared registerShare(Shared shared) {
+
+        shared.setPath(shared.getPath().replaceAll(Matcher.quoteReplacement(File.separator),"/"));
+
+        Long size = FileManager.getSizeFolder(shared.getPath());
+
+        shared.setSize(size);
+
+        return insert(shared);
+
+    }
+
+    public Shared registerShare(String title, String directory) {
+
+        directory = directory.replaceAll(Matcher.quoteReplacement(File.separator),"/");
+
+        Long size = FileManager.getSizeFolder(directory);
+
+        Shared shared = new Shared(0L, title, directory, size);
+//        SharedDAO dao = new SharedDAO();
+
+        return insert(shared);
+
+    }
 }

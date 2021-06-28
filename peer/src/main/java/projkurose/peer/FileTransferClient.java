@@ -1,50 +1,55 @@
 package projkurose.peer;
 
 import projkurose.core.FileManager;
+import projkurose.peer.model.Shared;
 
 import java.io.*;
 import java.net.Socket;
 
 public class FileTransferClient implements Runnable {
     private Socket clientSocket;
-    private int serverPortDir;
-    private String serverIpDir;
-    private String path_dir;
-    private int hashCode;
+    private Shared share;
+    private String response;
 
-    public FileTransferClient(String response, String path_dir) {
-        int index = response.indexOf('|');
+    public FileTransferClient(Shared share, String response) {
+        this.share = share;
+        this.response = response;
+    }
 
-        hashCode = Integer.parseInt(response.substring(0, index));
-
-        response = response.substring(index + 1);
-
+    private boolean tryCheckConnection() {
         String[] fullAddress = response.split(";");
-        String[] addressIp = fullAddress[0].split(":");
 
-        this.serverIpDir = addressIp[0];
-        this.serverPortDir = Integer.valueOf(addressIp[1]);
-        this.path_dir = path_dir;
+        for (String server : fullAddress) {
+            String[] addressIpPort = server.split(":");
 
+            String ip = addressIpPort[0];
+            int port = Integer.parseInt(addressIpPort[1]);
+
+            try {
+                clientSocket = new Socket(ip, port);//6543
+            } catch (IOException e) {
+                return false; // falha de comunicação
+            }
+            return clientSocket.isConnected();
+        }
+        return false;
     }
 
     @Override
     public void run() {
         try {
-            teste();
+
+            if (tryCheckConnection()) startReceive();
+            else System.out.println("Falha ao realizar conexão com Servidores Peer");
+
         } catch (IOException e) {
             e.getStackTrace();
         }
     }
 
-    public void teste() throws IOException {
+    public void startReceive() throws IOException {
 
-        try {
-            clientSocket = new Socket(this.serverIpDir, this.serverPortDir);//6543
-        } catch (IOException e) {
-            System.out.println("Server offline");
-            System.exit(0);
-        }
+
         DataInputStream receive;
 
         DataOutputStream send;
@@ -52,12 +57,12 @@ public class FileTransferClient implements Runnable {
         receive = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
 
         send.writeChar('a');         // operacao
-        send.writeInt(hashCode);        // hashCode
+        send.writeInt(share.hashCode());        // hashCode
 
         int listLength = receive.readInt();
 
         while (listLength-- > 0) {
-            FileManager.receiveFileDir(receive, send, this.path_dir);
+            FileManager.receiveFileDir(receive, send, this.share.getPath());
         }
 
         clientSocket.close();

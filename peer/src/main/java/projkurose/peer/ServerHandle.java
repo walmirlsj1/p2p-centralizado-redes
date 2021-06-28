@@ -6,10 +6,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import projkurose.peer.model.Shared;
+import projkurose.peer.model.SharedDAO;
 
 public class ServerHandle {
     private final Integer clientSrvPort;
@@ -55,13 +57,17 @@ public class ServerHandle {
         send.flush();
     }
 
-    public void registerShareServer(Shared share) throws IOException {
+    public void registerShareServer(Shared share) {
         if (share == null) return;
-
-        /**
-         * clientId$title;title;...title
-         */
-        serverGo('r', String.format("%d$%s", clientId, share.getTitle()));
+        try {
+            /**
+             * clientId$title;title;...title
+             */
+            serverGo('r', String.format("%d$%s", clientId, share.getTitle()));
+        } catch (IOException e) {
+            System.out.println("Erro ao registrar compartilhamento: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 
     public void registerShareServer(List<Shared> shares) throws IOException {
@@ -124,8 +130,11 @@ public class ServerHandle {
         System.out.println("A tarefa esta comecando! " + texto);
     }
 
-    private void taskFinishedNotification(String texto) {
-        System.out.println("A tarefa terminou! " + texto);
+    private void taskFinishedNotification(Shared share) {
+        System.out.println("A tarefa terminou! " + share.getTitle());
+        SharedDAO sharedDAO = new SharedDAO();
+        Shared shared = sharedDAO.registerShare(share);
+        if (shared != null) registerShareServer(share);
     }
 
 
@@ -134,11 +143,24 @@ public class ServerHandle {
 
         if (this.type == 'n') return false;
 
-        FileTransferClient task = new FileTransferClient(new String(received), path_dir);
+        String response = new String(received);
+
+        int index = response.indexOf('|');
+
+
+        Shared share = new Shared();
+        share.setId(0L);
+        share.setTitle(response.substring(0, index));
+        share.setPath(path_dir);
+
+
+        response = response.substring(index + 1);
+
+        FileTransferClient task = new FileTransferClient(share, response);
         this.threadPool.execute(() -> {
             taskStartedNotification(path_dir);
             task.run();
-            taskFinishedNotification(path_dir);
+            taskFinishedNotification(share);
         });
 //        this.threadPool.execute(new FileTransferClient(id, clients, path_dir));
         return true;
@@ -151,4 +173,5 @@ public class ServerHandle {
 
         return new String(received).split(";");
     }
+
 }

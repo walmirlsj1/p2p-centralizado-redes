@@ -164,8 +164,8 @@ public class ConsoleGUI {
                 System.out.println("Informe o titulo: ");
                 title = in.readLine();
             } while (!file.exists());
-
-            Shared shared = registerShare(title, directory);
+            SharedDAO sharedDAO = new SharedDAO();
+            Shared shared = sharedDAO.registerShare(title, directory);
             if (shared != null) client.registerShareServer(shared);
 
         } catch (IOException e) {
@@ -191,7 +191,8 @@ public class ConsoleGUI {
 
         try {
             Long id = Long.valueOf(in.readLine());
-            deleteShare(id);
+            SharedDAO sharedDAO = new SharedDAO();
+            sharedDAO.delete(id);
         } catch (IOException e) {
             System.out.println("deleteShareConsole: Error I/O");
         }
@@ -201,22 +202,6 @@ public class ConsoleGUI {
         client.disconnectFromServerDirectory();
     }
 
-    public Shared registerShare(String title, String directory) {
 
-        directory = directory.replaceAll(Matcher.quoteReplacement(File.separator),"/");
-
-        Long size = FileManager.getSizeFolder(directory);
-
-        Shared shared = new Shared(0L, title, directory, size);
-        SharedDAO dao = new SharedDAO();
-
-        return dao.insert(shared);
-
-    }
-
-    public boolean deleteShare(Long id) {
-        SharedDAO dao = new SharedDAO();
-        return dao.delete(id);
-    }
 
 }
