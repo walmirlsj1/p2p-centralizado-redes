@@ -1,4 +1,5 @@
 package projkurose.peer.model;
+
 import projkurose.core.SQLiteJDBCDriverConnection;
 
 import java.sql.*;
@@ -17,8 +18,8 @@ public class SharedDAO {
         try (Statement stmt = con.createStatement()) {
 
             String sql_insert = String.format(
-                    "INSERT INTO SHARED(TITLE, SHARED_PATH, SIZE_PATH) VALUES ('%s', '%s', %d)",
-                    shared.getTitle(), shared.getPath(), shared.getSize()
+                    "INSERT INTO SHARED(TITLE, SHARED_PATH, SIZE_PATH, HASH_CODE) VALUES ('%s', '%s', %d, %d)",
+                    shared.getTitle(), shared.getPath(), shared.getSize(), shared.hashCode()
             );
 
             stmt.execute(sql_insert);
@@ -43,8 +44,8 @@ public class SharedDAO {
         }
     }
 
-    public Shared findById(long id) {
-        String querySql = String.format("SELECT * FROM SHARED WHERE ID=%d", id);
+    public Shared findByHashCode(int id) {
+        String querySql = String.format("SELECT * FROM SHARED WHERE HASH_CODE=%d", id);
         try (PreparedStatement query = con.prepareStatement(querySql)) {
 
             ResultSet resultSet = query.executeQuery();
@@ -79,10 +80,10 @@ public class SharedDAO {
     }
 
     public List<Shared> findAll() {
-        try(PreparedStatement query = con.prepareStatement("select * from SHARED")){
+        try (PreparedStatement query = con.prepareStatement("select * from SHARED")) {
             ResultSet resultSet = query.executeQuery();
             return convertListShared(resultSet);
-        }catch (SQLException e){
+        } catch (SQLException e) {
             System.out.println("Error findAll: " + e.getMessage());
         }
         return null;

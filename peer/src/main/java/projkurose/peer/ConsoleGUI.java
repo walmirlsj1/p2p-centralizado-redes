@@ -135,6 +135,7 @@ public class ConsoleGUI {
         String[] list = client.findTitleServer(title);
         if (list == null || list.length == 0) {
             System.out.println("Titulo: " + title + " - Não foi encontrado no servidor");
+            return;
         }
 
         String[] listHash;
@@ -160,7 +161,8 @@ public class ConsoleGUI {
                 System.out.println("Informe o diretorio ou arquivo a ser compartilhado: ");
                 directory = in.readLine();
                 file = new File(directory);
-                title = file.getName();
+                System.out.println("Informe o titulo: ");
+                title = in.readLine();
             } while (!file.exists());
 
             Shared shared = registerShare(title, directory);

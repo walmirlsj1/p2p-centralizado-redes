@@ -10,11 +10,16 @@ public class FileTransferClient implements Runnable {
     private int serverPortDir;
     private String serverIpDir;
     private String path_dir;
-    private Long id;
+    private int hashCode;
 
-    public FileTransferClient(Long id, String clients, String path_dir) {
-        this.id = id;
-        String[] fullAddress = clients.split(";");
+    public FileTransferClient(String response, String path_dir) {
+        int index = response.indexOf('|');
+
+        hashCode = Integer.parseInt(response.substring(0, index));
+
+        response = response.substring(index + 1);
+
+        String[] fullAddress = response.split(";");
         String[] addressIp = fullAddress[0].split(":");
 
         this.serverIpDir = addressIp[0];
@@ -46,11 +51,8 @@ public class FileTransferClient implements Runnable {
         send = new DataOutputStream(clientSocket.getOutputStream());
         receive = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
 
-        String data = String.valueOf(id);
-
         send.writeChar('a');         // operacao
-        send.writeInt(data.length());   // length
-        send.writeBytes(data);          // data
+        send.writeInt(hashCode);        // hashCode
 
         int listLength = receive.readInt();
 

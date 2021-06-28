@@ -16,8 +16,8 @@ public class DirectoryDAO {
 
     public Directory insert(Directory directory) {
         String sql_insert = String.format(
-                "INSERT INTO DIRECTORY(TITLE, SIZE_PATH) VALUES ('%s', %d)",
-                directory.getTitle(), directory.getSize()
+                "INSERT INTO DIRECTORY(TITLE) VALUES ('%s')",
+                directory.getTitle()
         );
 
         try (Statement stmt = con.createStatement()) {
@@ -144,14 +144,13 @@ public class DirectoryDAO {
     private Directory resultSetToDirectory(ResultSet resultSet) throws SQLException {
         Long id = resultSet.getLong("ID");
         String title = resultSet.getString("TITLE");
-        Long size = resultSet.getLong("SIZE_PATH");
 
-        return new Directory(id, title, size);
+        return new Directory(id, title);
     }
 
     public Boolean insertClientDirectory(Directory directory, Client client) {
         String sql_insert = String.format(
-                "INSERT INTO CLIENT_DIRECTORY(CLIENT_ID, DIRECTORY_ID) VALUES ('%d', %d);",
+                "INSERT INTO CLIENT_DIRECTORY(CLIENT_ID, DIRECTORY_ID) VALUES (%d, %d);",
                 client.getId(), directory.getId()
         );
 

@@ -1,33 +1,36 @@
 package projkurose.peer.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.FieldNameConstants;
 
 import java.util.Objects;
 
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class Shared {
-    private Long id;
-    private String title;
-    private String path;
-    private Long size;
+
+    private Long id, size;
+    private String title, path;
+
+    public Shared(Long id, String title, String path, Long size) {
+        this.id = id;
+        this.title = title;
+        this.path = path;
+        this.size = size;
+    }
 
     @Override
     public boolean equals(Object o) {
-//        if (this == o) return true;
+        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Shared shared = (Shared) o;
-        return Objects.equals(title, shared.title) && Objects.equals(size, shared.size);
+        return Objects.equals(title, shared.title);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(title, size);
+        return Objects.hash(title);
     }
 
     @Override
@@ -36,7 +39,8 @@ public class Shared {
                 "id=" + id +
                 ", title='" + title + '\'' +
                 ", path='" + path + '\'' +
-                ", size=" + size +
+                ", size=" + size + '\'' +
+                ", hashCode=" + hashCode() +
                 '}';
     }
 }

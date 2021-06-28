@@ -37,7 +37,7 @@ public class Main {
 
         SQLiteJDBCDriverConnection.executeSQL("CREATE TABLE IF NOT EXISTS SHARED (" +
                 " ID INTEGER PRIMARY KEY AUTOINCREMENT, TITLE VARCHAR(80), " +
-                " SHARED_PATH VARCHAR(255), SIZE_PATH INTEGER );");
+                " SHARED_PATH VARCHAR(255), SIZE_PATH INTEGER, HASH_CODE INTEGER );");
 
         SQLiteJDBCDriverConnection.executeSQL("CREATE TABLE IF NOT EXISTS" +
                 " CLIENT(USER_ID VARCHAR(255), LAST_UPDATE DATETIME);");

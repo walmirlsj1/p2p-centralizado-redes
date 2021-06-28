@@ -59,24 +59,24 @@ public class ServerHandle {
         if (share == null) return;
 
         /**
-         * clientId$title;size()|title;size()|...title;size()
+         * clientId$title;title;...title
          */
-        serverGo('r', String.format("%d$%s;%d", clientId, share.getTitle(), share.getSize()));
+        serverGo('r', String.format("%d$%s", clientId, share.getTitle()));
     }
 
     public void registerShareServer(List<Shared> shares) throws IOException {
         if (shares.isEmpty()) return;
 
         /**
-         * clientId$title;size()|title;size()|...title;size()
+         * clientId$title;title;...title
          */
 
-        String shareText = "";
+        StringBuilder shareText = new StringBuilder();
         for (Shared share : shares) {
-            shareText += String.format("%s;%d|", share.getTitle(), share.getSize());
+            shareText.append(String.format("%s;", share.getTitle()));
         }
 
-        shareText = shareText.substring(0, shareText.length() - 1);
+        shareText = new StringBuilder(shareText.substring(0, shareText.length() - 1));
 
         serverGo('r', String.format("%d$%s", clientId, shareText));
     }
@@ -128,23 +128,19 @@ public class ServerHandle {
         System.out.println("A tarefa terminou! " + texto);
     }
 
-    private void getFromServerPeer(Long id, String clients, String path_dir) {
-        FileTransferClient task = new FileTransferClient(id, clients, path_dir);
-        this.threadPool.execute(() -> {
-            taskStartedNotification(path_dir);
-            task.run();
-            taskFinishedNotification(path_dir);
-        });
-//        this.threadPool.execute(new FileTransferClient(id, clients, path_dir));
-
-    }
 
     public boolean getFromServer(Long id, String path_dir) throws IOException {
         serverGo('s', String.valueOf(id));
 
         if (this.type == 'n') return false;
 
-        getFromServerPeer(id, new String(received), path_dir);
+        FileTransferClient task = new FileTransferClient(new String(received), path_dir);
+        this.threadPool.execute(() -> {
+            taskStartedNotification(path_dir);
+            task.run();
+            taskFinishedNotification(path_dir);
+        });
+//        this.threadPool.execute(new FileTransferClient(id, clients, path_dir));
         return true;
     }
 

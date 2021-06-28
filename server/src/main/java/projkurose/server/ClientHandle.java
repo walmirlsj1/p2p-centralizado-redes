@@ -8,6 +8,7 @@ import java.net.Socket;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.commons.lang3.NotImplementedException;
 import projkurose.server.model.ClientDAO;
@@ -89,7 +90,7 @@ public class ClientHandle implements Runnable {
             case 's':
                 System.out.println("Seek file shared from clients " + clientIP);
 
-                messageReply = seek(data);
+                messageReply = seek(Long.parseLong(data));
 
                 if (messageReply.length() == 0) {
                     operationReply = 'n';
@@ -194,21 +195,18 @@ public class ClientHandle implements Runnable {
         return String.valueOf(client.getId());
     }
 
-    private String seek(String text_id) {
+    private String seek(Long id) {
         DirectoryDAO dirDAO = new DirectoryDAO();
-        Directory dir;
+
         String clientList = "";
-        Long id = 0L;
 
-        id = Long.valueOf(text_id);
-        dir = dirDAO.findById(id);
+        Directory dir = dirDAO.findById(id);
 
-        if(dir == null) return clientList;
+        if (dir == null) return clientList;
 
         List<Client> listClients = dirDAO.findAllClientsByDirectory(dir);
 
         if (!listClients.isEmpty()) {
-            clientList = "";
 
             for (Client c : listClients) {
                 clientList += c.getAddress() + ";";
@@ -216,7 +214,8 @@ public class ClientHandle implements Runnable {
 
             clientList = clientList.substring(0, clientList.length() - 1); // remove ultimo ';'
         }
-        return clientList;
+
+        return dir.hashCode() + "|" + clientList;
     }
 
     private boolean register(String pacoteRecebido) {
@@ -243,7 +242,7 @@ public class ClientHandle implements Runnable {
 
         List<Directory> listDirectory = new ArrayList<>();
 
-        String[] list = pacote[1].split("[|]");
+        String[] list = pacote[1].split("[;]");
 
         List<Directory> directoriesClient = directoryDAO.getAllDirectoryByClient(client);
         /**
@@ -253,15 +252,14 @@ public class ClientHandle implements Runnable {
          * 3 - Compartilhamentos Não cadastrado
          */
 
-        for (String l : list) {
-            String[] directoryTam = l.split(";");
+        for (String title : list) {
+//            String[] directoryTam = l.split(";");
 
             directory = new Directory();
-            directory.setTitle(directoryTam[0]);
-            directory.setSize(Long.valueOf(directoryTam[1]));
+            directory.setTitle(title);
 
             if (!directoriesClient.contains(directory)) {
-                directoryTemp = directoryDAO.findByTitle(directoryTam[0]);
+                directoryTemp = directoryDAO.findByTitle(title);
                 if (directoryTemp == null) {
 
                     directoryTemp = directoryDAO.insert(directory);

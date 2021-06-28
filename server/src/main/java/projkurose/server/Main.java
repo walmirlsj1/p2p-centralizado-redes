@@ -29,8 +29,7 @@ public class Main {
         SQLiteJDBCDriverConnection.setDatabase(database);
 
         SQLiteJDBCDriverConnection.executeSQL("CREATE TABLE IF NOT EXISTS DIRECTORY (" +
-                " ID INTEGER PRIMARY KEY AUTOINCREMENT, TITLE VARCHAR(80), " +
-                " SHARED_PATH VARCHAR(255), SIZE_PATH INTEGER );");
+                " ID INTEGER PRIMARY KEY AUTOINCREMENT, TITLE VARCHAR(255) );");
 
         SQLiteJDBCDriverConnection.executeSQL("CREATE TABLE IF NOT EXISTS CLIENT (" +
                 " ID INTEGER PRIMARY KEY AUTOINCREMENT, ADDRESS VARCHAR(21) );");

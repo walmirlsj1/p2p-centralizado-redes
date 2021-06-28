@@ -35,16 +35,18 @@ public class FileTransferServer implements Runnable {
         /**
          * Recebe dados do cliente
          */
-        char operation = recebe.readChar();
+        char operation = recebe.readChar(); // seria util para continuar um download..
 
-        int length = recebe.readInt();
-
-        String data = new String(recebe.readNBytes(length));
+        int hashCode = recebe.readInt();
 
         SharedDAO dao = new SharedDAO();
-        Shared shared = dao.findById(Long.parseLong(data));
 
-        if (shared == null) envia.writeInt(0);
+        Shared shared = dao.findByHashCode(hashCode);
+
+        if (shared == null) {
+            envia.writeInt(0);
+            return;
+        }
 
         String path_dir = shared.getPath();
 

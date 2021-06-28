@@ -47,8 +47,8 @@ public class FileManager {
     public static List<String> loadFileList(String path_folder) {
         try (Stream<Path> walk = Files.walk(Paths.get(path_folder))) {
             List<String> result = walk.filter(Files::isRegularFile)
-                    .map(x -> x.toString().replaceFirst(path_folder, ""))
-//                    .map(x -> x.replaceAll(Matcher.quoteReplacement(File.separator),"/"))
+                    .map(x -> x.toString().replaceAll(Matcher.quoteReplacement(File.separator),"/"))
+                    .map(x -> x.replaceFirst(path_folder, ""))
                     .collect(Collectors.toList());
 
             result.forEach(System.out::println);
