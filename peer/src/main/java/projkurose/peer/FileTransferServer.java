@@ -2,10 +2,13 @@ package projkurose.peer;
 
 import lombok.SneakyThrows;
 import projkurose.core.FileManager;
+import projkurose.peer.model.Shared;
+import projkurose.peer.model.SharedDAO;
 
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
 
 public class FileTransferServer implements Runnable {
     private final Socket connectionSocket;
@@ -38,12 +41,18 @@ public class FileTransferServer implements Runnable {
 
         String data = new String(recebe.readNBytes(length));
 
-        String path_dir = "/home/ghost/Shared/Meu/";
+        SharedDAO dao = new SharedDAO();
+        Shared shared = dao.findById(Long.parseLong(data));
 
-        ArrayList<String> fileList = (ArrayList<String>) FileManager.loadFileList("/home/ghost/Shared/Meu/");
+        if (shared == null) envia.writeInt(0);
+
+        String path_dir = shared.getPath();
+
+        ArrayList<String> fileList = (ArrayList<String>) FileManager.loadFileList(path_dir);
 
 
         envia.writeInt(fileList.size());
+
 
         for (String filename : fileList) {
             FileManager.sendFileDir(recebe, envia, path_dir, filename);

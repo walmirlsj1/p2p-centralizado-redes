@@ -120,19 +120,20 @@ public class ServerHandle {
         System.out.println("Cliente registrado no servidor");
     }
 
-    private void taskStartedNotification(String texto){
+    private void taskStartedNotification(String texto) {
         System.out.println("A tarefa esta comecando! " + texto);
     }
-    private void taskFinishedNotification(String texto){
+
+    private void taskFinishedNotification(String texto) {
         System.out.println("A tarefa terminou! " + texto);
     }
+
     private void getFromServerPeer(Long id, String clients, String path_dir) {
-        this.threadPool.execute(new Runnable() {
-            public void run() {
-                taskStartedNotification(path_dir);
-                new FileTransferClient(id, clients, path_dir).run();
-                taskFinishedNotification(path_dir);
-            }
+        FileTransferClient task = new FileTransferClient(id, clients, path_dir);
+        this.threadPool.execute(() -> {
+            taskStartedNotification(path_dir);
+            task.run();
+            taskFinishedNotification(path_dir);
         });
 //        this.threadPool.execute(new FileTransferClient(id, clients, path_dir));
 

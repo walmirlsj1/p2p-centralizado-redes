@@ -2,6 +2,7 @@ package projkurose.peer;
 
 import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
 
 import projkurose.core.FileManager;
 import projkurose.peer.model.Shared;
@@ -161,6 +162,7 @@ public class ConsoleGUI {
                 file = new File(directory);
                 title = file.getName();
             } while (!file.exists());
+
             Shared shared = registerShare(title, directory);
             if (shared != null) client.registerShareServer(shared);
 
@@ -198,6 +200,8 @@ public class ConsoleGUI {
     }
 
     public Shared registerShare(String title, String directory) {
+
+        directory = directory.replaceAll(Matcher.quoteReplacement(File.separator),"/");
 
         Long size = FileManager.getSizeFolder(directory);
 

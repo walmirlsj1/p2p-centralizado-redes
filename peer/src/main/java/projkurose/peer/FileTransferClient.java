@@ -46,7 +46,7 @@ public class FileTransferClient implements Runnable {
         send = new DataOutputStream(clientSocket.getOutputStream());
         receive = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
 
-        String data = "Teste envio";
+        String data = String.valueOf(id);
 
         send.writeChar('a');         // operacao
         send.writeInt(data.length());   // length

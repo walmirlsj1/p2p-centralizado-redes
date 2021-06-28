@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -44,13 +45,13 @@ public class FileManager {
     }
 
     public static List<String> loadFileList(String path_folder) {
-
         try (Stream<Path> walk = Files.walk(Paths.get(path_folder))) {
             List<String> result = walk.filter(Files::isRegularFile)
                     .map(x -> x.toString().replaceFirst(path_folder, ""))
+//                    .map(x -> x.replaceAll(Matcher.quoteReplacement(File.separator),"/"))
                     .collect(Collectors.toList());
 
-//            result.forEach(System.out::println);
+            result.forEach(System.out::println);
             return result;
         } catch (IOException e) {
             System.out.println(e.getMessage());
@@ -93,6 +94,8 @@ public class FileManager {
         send.writeBytes(filename);
         send.writeLong(file_sender.length());
 
+        System.out.println("Enviando arquivo " + filename);
+
         if (receive.readChar() == 'c') return; // arquivo já esta no cliente (c)ompleto
         try (
                 InputStream inputStream = new FileInputStream(file_sender);
@@ -121,6 +124,9 @@ public class FileManager {
         File destination = new File(path_dir + filename);
 
         String pathFile = destination.getAbsolutePath();
+
+        System.out.println("Recebendo arquivo: " + pathFile);
+
 
         pathFile = pathFile.substring(0, pathFile.length() - destination.getName().length());
 
