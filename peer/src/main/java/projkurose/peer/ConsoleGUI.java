@@ -19,6 +19,7 @@ import projkurose.peer.model.SharedDAO;
 
 public class ConsoleGUI {
     ServerHandle client;
+    static BufferedReader bfr;
 
     public ConsoleGUI(Long clientId, int clientSrvPort, String serverIpDir, int serverPortDir) throws IOException {
         client = new ServerHandle(clientId, clientSrvPort, serverIpDir, serverPortDir);
@@ -27,6 +28,8 @@ public class ConsoleGUI {
 
     public void run() throws IOException {
         System.out.println("Iniciando Cliente");
+        bfr = new BufferedReader(new InputStreamReader(System.in));
+
         boolean flagContinue = true;
         while (flagContinue) {
             flagContinue = clientConsole();
@@ -35,8 +38,7 @@ public class ConsoleGUI {
 
     private boolean clientConsole() throws IOException {
 
-        BufferedReader inFromUser =
-                new BufferedReader(new InputStreamReader(System.in));
+        ClearConsole();
 
         System.out.println("===== Lista das operações possiveis ============");
         System.out.println("===  (R)EG: Registra Arquivo/Pasta           ===");
@@ -45,17 +47,16 @@ public class ConsoleGUI {
         System.out.println("===  (D)EL: Remove um item compartilhado     ===");
         System.out.println("=== (E)XIT: Para sair                        ===");
         System.out.println("================================================");
-        System.out.println("Informe OP: GET/FIND/REG");
-        String op = inFromUser.readLine();
+        System.out.println("Informe OP: R | F | D | E");
+        String op = bfr.readLine();
 
-
-        return this.processar(op.toUpperCase(Locale.ROOT));
+        if (op.length() == 0) return true;
+        return this.processar(op.toUpperCase(Locale.ROOT).charAt(0));
     }
 
-    private boolean processar(String op) throws IOException {
+    private boolean processar(char op) throws IOException {
         /**
          *          * (s)eek         : share from clients
-         *          * (n)ew          : seek client-serv offline
          *          * (r)egister     : share list need clientId*
          *          * (a)ply         : generate clientId* para client-serv
          *          * (d)isconnect   : from server need clientId*
@@ -65,33 +66,28 @@ public class ConsoleGUI {
          */
         boolean flagContinue = true;
 
-
-        if (op.equals("REG") || op.equals("R")) {
-            registerShareConsole();
-            /* @FIXME Estamos enviando todos os items compartilhados, pra adiantar */
-
-
-//        } else if (op.equals("GET") || op.equals("G")) {  // GET: Solicita Download do arquivo
-//            getListPeerForDownload();
-
-        } else if (op.equals("FIND") || op.equals("F")) { // FIND: Procura arquivo no server
-            findServerConsole();
-
-        } else if (op.equals("DEL") || op.equals("D")) { // DEL: Para compartilhamento ConsoleGUI
-            deleteShareConsole();
-
-        } else if (op.equals("EXIT") || op.equals("E")) {
-            disconnect();
-
-            flagContinue = false;
+        switch (op) {
+            case 'R':
+                registerShareConsole();
+                /* @FIXME Estamos enviando todos os items compartilhados, pra adiantar */
+                break;
+            case 'F':
+                findServerConsole();
+                break;
+            case 'D': // DEL: Para compartilhamento ConsoleGUI
+                deleteShareConsole();
+                break;
+            case 'E':
+                disconnect();
+                flagContinue = false;
+                break;
+            default:
+                System.out.println("Opção Incorreta!");
         }
-
         return flagContinue;
     }
 
     private void getListPeerForDownloadConsole() throws IOException {
-        BufferedReader scanner =
-                new BufferedReader(new InputStreamReader(System.in));
 
         Long id = -1L;
         String path_dir = "";
@@ -100,7 +96,7 @@ public class ConsoleGUI {
             try {
                 System.out.println("****** Para voltar menu principal digite uma letra  ******\n" +
                         "Informe numero ID para requisitar download: ");
-                id = Long.valueOf(scanner.readLine());
+                id = Long.valueOf(bfr.readLine());
 
             } catch (NumberFormatException | IOException e) {
                 return;
@@ -109,7 +105,7 @@ public class ConsoleGUI {
         while (path_dir.length() == 0) {
             try {
                 System.out.println("Informe diretorio para salvar download: ");
-                path_dir = String.valueOf(scanner.readLine());
+                path_dir = String.valueOf(bfr.readLine());
             } catch (IOException e) {
                 return;
             }
@@ -120,14 +116,12 @@ public class ConsoleGUI {
 
 
     private void findServerConsole() throws IOException {
-        BufferedReader scanner =
-                new BufferedReader(new InputStreamReader(System.in));
         String title = "";
 
         while (title.equals("")) {
             try {
                 System.out.println("Informe um titulo para pesquisa");
-                title = scanner.readLine();
+                title = bfr.readLine();
             } catch (IOException e) {
                 System.out.println("Error getListPeerForDownload: " + e.getMessage());
             }
@@ -149,8 +143,6 @@ public class ConsoleGUI {
     }
 
     private void registerShareConsole() {
-        BufferedReader in =
-                new BufferedReader(new InputStreamReader(System.in));
 
         String title;
         String directory;
@@ -159,10 +151,10 @@ public class ConsoleGUI {
         try {
             do {
                 System.out.println("Informe o diretorio ou arquivo a ser compartilhado: ");
-                directory = in.readLine();
+                directory = bfr.readLine();
                 file = new File(directory);
                 System.out.println("Informe o titulo: ");
-                title = in.readLine();
+                title = bfr.readLine();
             } while (!file.exists());
             SharedDAO sharedDAO = new SharedDAO();
             Shared shared = sharedDAO.registerShare(title, directory);
@@ -174,9 +166,6 @@ public class ConsoleGUI {
     }
 
     private void deleteShareConsole() {
-        BufferedReader in =
-                new BufferedReader(new InputStreamReader(System.in));
-
 
         SharedDAO dao = new SharedDAO();
         List<Shared> shared = dao.findAll();
@@ -190,7 +179,7 @@ public class ConsoleGUI {
         }
 
         try {
-            Long id = Long.valueOf(in.readLine());
+            Long id = Long.valueOf(bfr.readLine());
             SharedDAO sharedDAO = new SharedDAO();
             sharedDAO.delete(id);
         } catch (IOException e) {
@@ -202,6 +191,22 @@ public class ConsoleGUI {
         client.disconnectFromServerDirectory();
     }
 
+    public static void ClearConsole() {
+        try {
+            String operatingSystem = System.getProperty("os.name"); //Check the current operating system
 
+            if (operatingSystem.contains("Windows")) {
+                ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "cls");
+                Process startProcess = pb.inheritIO().start();
+                startProcess.waitFor();
+            } else {
+                ProcessBuilder pb = new ProcessBuilder("clear");
+                Process startProcess = pb.inheritIO().start();
 
+                startProcess.waitFor();
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
 }

@@ -94,8 +94,7 @@ public class FileManager {
         send.writeBytes(filename);
         send.writeLong(file_sender.length());
 
-        System.out.println("Enviando arquivo " + filename);
-
+//        System.out.println("Enviando arquivo " + filename);
         if (receive.readChar() == 'c') return; // arquivo já esta no cliente (c)ompleto
         try (
                 InputStream inputStream = new FileInputStream(file_sender);
@@ -125,7 +124,7 @@ public class FileManager {
 
         String pathFile = destination.getAbsolutePath();
 
-        System.out.println("Recebendo arquivo: " + pathFile);
+//        System.out.println("Recebendo arquivo: " + pathFile);
 
 
         pathFile = pathFile.substring(0, pathFile.length() - destination.getName().length());
