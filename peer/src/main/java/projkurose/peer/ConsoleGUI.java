@@ -2,6 +2,7 @@ package projkurose.peer;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 
 import projkurose.core.FileManager;
@@ -163,7 +164,12 @@ public class ConsoleGUI {
             } while (!file.exists());
             SharedDAO sharedDAO = new SharedDAO();
             Shared shared = sharedDAO.registerShare(title, directory);
-            if (shared != null) client.registerShareServer(shared);
+            if (shared != null) {
+                client.registerShareServer(shared);
+                System.out.println("Shared enviado para cadastro...");
+            } else {
+                System.out.println("Shared Não enviado para cadastro...");
+            }
 
         } catch (IOException e) {
             System.out.println("registerShareConsole: Error I/O");
@@ -183,11 +189,12 @@ public class ConsoleGUI {
             System.out.println(String.format("Id: %d - Title: %s - Size: %d", s.getId(), s.getTitle(), s.getSize()));
         }
 
-        Long id = 1L;
+        long id = -1L;
 
         while (id == -1L) {
             try {
-                id = Long.valueOf(bfr.readLine());
+//                System.out.print("Informe o id para deletado: ");
+                id = Long.parseLong(bfr.readLine());
 
             } catch (NumberFormatException | IOException e) {
                 return;
@@ -205,6 +212,8 @@ public class ConsoleGUI {
 
     public static void ClearConsole() {
         try {
+            TimeUnit.SECONDS.sleep(2);
+
             String operatingSystem = System.getProperty("os.name"); //Check the current operating system
             if (operatingSystem.contains("Windows")) {
                 ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "cls");

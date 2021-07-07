@@ -105,7 +105,8 @@ public class ClientHandle implements Runnable {
             case 'r':
                 System.out.println("Register shareds in server: " + clientIP);
                 messageReply = "OK";
-                operation = register(data) ? 'o' : 'f';
+                operation = register(data) ? 'o' : 'e';
+                System.out.println("operation " + operation + " data: " + data);
 
                 if (operation == 'e') messageReply = "Failed process request";
 
@@ -264,7 +265,7 @@ public class ClientHandle implements Runnable {
 
                     directoryTemp = directoryDAO.insert(directory);
 
-                    if (directoryTemp != null) return false;
+                    if (directoryTemp == null) return false;
                 }
                 listDirectory.add(directoryTemp);
             }

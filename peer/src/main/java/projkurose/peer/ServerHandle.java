@@ -65,6 +65,10 @@ public class ServerHandle {
              * clientId$title;title;...title
              */
             serverGo('r', String.format("%d$%s", clientId, share.getTitle()));
+            if(this.type == 'e'){
+                String error = new String(this.receive.readNBytes(this.length));
+                throw new IOException(error);
+            }
         } catch (IOException e) {
             System.out.println("Erro ao registrar compartilhamento: " + e.getMessage());
             throw new RuntimeException(e);
