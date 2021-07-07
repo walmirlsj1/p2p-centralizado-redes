@@ -153,6 +153,11 @@ public class ConsoleGUI {
                 System.out.println("Informe o diretorio ou arquivo a ser compartilhado: ");
                 directory = bfr.readLine();
                 file = new File(directory);
+                /**
+                 * @FIXME
+                 * Não verifica se diretorio existe
+                 */
+
                 System.out.println("Informe o titulo: ");
                 title = bfr.readLine();
             } while (!file.exists());
@@ -178,13 +183,20 @@ public class ConsoleGUI {
             System.out.println(String.format("Id: %d - Title: %s - Size: %d", s.getId(), s.getTitle(), s.getSize()));
         }
 
-        try {
-            Long id = Long.valueOf(bfr.readLine());
-            SharedDAO sharedDAO = new SharedDAO();
-            sharedDAO.delete(id);
-        } catch (IOException e) {
-            System.out.println("deleteShareConsole: Error I/O");
+        Long id = 1L;
+
+        while (id == -1L) {
+            try {
+                id = Long.valueOf(bfr.readLine());
+
+            } catch (NumberFormatException | IOException e) {
+                return;
+            }
         }
+
+        SharedDAO sharedDAO = new SharedDAO();
+        sharedDAO.delete(id);
+
     }
 
     public void disconnect() throws IOException {
@@ -194,7 +206,6 @@ public class ConsoleGUI {
     public static void ClearConsole() {
         try {
             String operatingSystem = System.getProperty("os.name"); //Check the current operating system
-
             if (operatingSystem.contains("Windows")) {
                 ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "cls");
                 Process startProcess = pb.inheritIO().start();

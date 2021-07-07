@@ -54,6 +54,7 @@ public class ServerHandle {
         send.writeChar(op);                 // operacao
         send.writeInt(data.length());   // length
         send.writeBytes(data);          // data
+
         send.flush();
     }
 

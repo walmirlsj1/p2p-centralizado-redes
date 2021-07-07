@@ -96,9 +96,7 @@ public class FileManager {
 
 //        System.out.println("Enviando arquivo " + filename);
         if (receive.readChar() == 'c') return; // arquivo já esta no cliente (c)ompleto
-        try (
-                InputStream inputStream = new FileInputStream(file_sender);
-        ) {
+        try (InputStream inputStream = new FileInputStream(file_sender);) {
 
             byte[] buffer = new byte[4096];
             int bytesRead = -1;

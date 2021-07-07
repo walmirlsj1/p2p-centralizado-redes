@@ -37,6 +37,22 @@ public class Config {
             config.setProperty("server_ip", "127.0.0.1");
             config.setProperty("server_port", "7000");
 
+            /**
+             * config e-mail
+             */
+
+            config.setProperty("email_emitente_email", "teste@test.com");
+            config.setProperty("email_emitente_nome", "P2P Email - Download Iniciado!");
+            config.setProperty("email_emitente_passwd", "7070!70");
+
+            config.setProperty("email_server_smtp", "smtp.com.br");
+            config.setProperty("email_server_smtp_porta", "587");
+            config.setProperty("email_server_smtp_ssl", "false");
+            config.setProperty("email_server_smtp_tls", "true");
+
+            config.setProperty("destinatario_email", "teste@test.com");
+            config.setProperty("destinatario_nome", "teste");
+
             layout.save(config, new FileWriter(file));
         } else {
             layout.load(config, new InputStreamReader(new FileInputStream(file)));

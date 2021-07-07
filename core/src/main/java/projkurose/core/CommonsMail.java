@@ -9,21 +9,16 @@ public class CommonsMail {
 	private String emitenteEmail;
 	private String emitenteNome;
 	private String emitentePasswd;
-	private String destinatarioEmail;
-	private String destinatarioNome;
 	private String smtpServer;
 	private int smtpPort;
-	private boolean ssl;
-	private boolean tls;
-
-	private String title = "";
-	private String message = "";
+	private boolean ssl, tls;
 
 	public CommonsMail() {
 		try {
 			emitenteEmail = Config.getConfiguracao().getString("email_emitente_email");
 			emitenteNome = Config.getConfiguracao().getString("email_emitente_nome");
 			emitentePasswd = Config.getConfiguracao().getString("email_emitente_passwd");
+
 			smtpServer = Config.getConfiguracao().getString("email_server_smtp");
 			smtpPort = Config.getConfiguracao().getInt("email_server_smtp_porta");
 			ssl = Config.getConfiguracao().getBoolean("email_server_smtp_ssl");
@@ -42,6 +37,7 @@ public class CommonsMail {
 		SimpleEmail email = new SimpleEmail();
 		email.setSmtpPort(smtpPort);
 		email.setSSLOnConnect(ssl);
+		email.setStartTLSEnabled(tls);
 		email.setHostName(smtpServer); // o servidor SMTP para envio do e-mail
 		email.setAuthentication(emitenteEmail, emitentePasswd);
 

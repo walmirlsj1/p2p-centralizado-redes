@@ -158,7 +158,7 @@ public class ClientHandle implements Runnable {
         for (Directory d : list) {
             seeds = dirDAO.countUseDirectory(d);
             listDir += String.format("%d|%s|%d;", d.getId(), d.getTitle(), seeds); //d.getTitle() + ";"
-            System.out.println(String.format("%d|%s|%d;", d.getId(), d.getTitle(), seeds));
+//            System.out.println(String.format("%d|%s|%d;", d.getId(), d.getTitle(), seeds));
         }
         listDir = listDir.length() > 0 ? listDir.substring(0, listDir.length() - 1) : "";
         return listDir;
@@ -182,7 +182,7 @@ public class ClientHandle implements Runnable {
         String clientPeer = String.format("%s:%s", clientIP, porta);
 
         Client client = clientDAO.findByAddress(clientPeer);
-        System.out.println("Cliente " + client == null);
+//        System.out.println("Cliente " + client == null);
 
         if (client == null) {
             client = new Client();
