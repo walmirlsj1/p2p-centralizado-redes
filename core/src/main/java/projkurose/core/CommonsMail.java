@@ -23,10 +23,7 @@ public class CommonsMail {
 			smtpPort = Config.getConfiguracao().getInt("email_server_smtp_porta");
 			ssl = Config.getConfiguracao().getBoolean("email_server_smtp_ssl");
 			tls = Config.getConfiguracao().getBoolean("email_server_smtp_tls");
-		} catch (ConfigurationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
+		} catch (ConfigurationException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

@@ -6,7 +6,7 @@ import projkurose.peer.model.Shared;
 import java.io.*;
 import java.net.Socket;
 
-public class FileTransferClient implements Runnable {
+public class FileTransferClient {
     private Socket clientSocket;
     private Shared share;
     private String response;
@@ -35,19 +35,19 @@ public class FileTransferClient implements Runnable {
         return false;
     }
 
-    @Override
-    public void run() {
+    public boolean run() {
         try {
 
-            if (tryCheckConnection()) startReceive();
-            else System.out.println("Falha ao realizar conexão com Servidores Peer");
+            if (tryCheckConnection()) return startReceive();
+//            else System.out.println("Falha ao realizar conexão com Servidores Peer");
 
         } catch (IOException e) {
             e.getStackTrace();
         }
+        return false;
     }
 
-    public void startReceive() throws IOException {
+    public boolean startReceive() throws IOException {
 
 
         DataInputStream receive;
@@ -61,11 +61,20 @@ public class FileTransferClient implements Runnable {
 
         int listLength = receive.readInt();
 
+        if(listLength == 0) return false;
+
+        long shareLength = receive.readLong();
+
+        long shareReceivedLength = 0L;
+
         while (listLength-- > 0) {
-            FileManager.receiveFileDir(receive, send, this.share.getPath());
+            shareReceivedLength += FileManager.receiveFileDir(receive, send, this.share.getPath());
         }
 
         clientSocket.close();
+
+        return shareLength == shareReceivedLength;
+
     }
 
 }

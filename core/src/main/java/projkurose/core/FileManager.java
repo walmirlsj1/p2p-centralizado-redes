@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -44,14 +46,27 @@ public class FileManager {
         return null;
     }
 
+    public static String getPathFile(String pathFile) {
+        pathFile = pathFile.replaceAll(Matcher.quoteReplacement(File.separator), "/");
+        pathFile = pathFile.substring(0, (pathFile.lastIndexOf('/') + 1));
+        return pathFile;
+    }
+
+    public static String getFileName(String pathFile) {
+        pathFile = pathFile.replaceAll(Matcher.quoteReplacement(File.separator), "/");
+        pathFile = pathFile.substring(pathFile.lastIndexOf('/'), pathFile.length());
+        return pathFile;
+    }
+
     public static List<String> loadFileList(String path_folder) {
+
         try (Stream<Path> walk = Files.walk(Paths.get(path_folder))) {
             List<String> result = walk.filter(Files::isRegularFile)
-                    .map(x -> x.toString().replaceAll(Matcher.quoteReplacement(File.separator),"/"))
+                    .map(x -> x.toString().replaceAll(Matcher.quoteReplacement(File.separator), "/"))
                     .map(x -> x.replaceFirst(path_folder, ""))
                     .collect(Collectors.toList());
 
-            result.forEach(System.out::println);
+//            result.forEach(System.out::println);
             return result;
         } catch (IOException e) {
             System.out.println(e.getMessage());
@@ -96,7 +111,8 @@ public class FileManager {
 
 //        System.out.println("Enviando arquivo " + filename);
         if (receive.readChar() == 'c') return; // arquivo já esta no cliente (c)ompleto
-        try (InputStream inputStream = new FileInputStream(file_sender);) {
+
+        try (InputStream inputStream = new FileInputStream(file_sender)) {
 
             byte[] buffer = new byte[4096];
             int bytesRead = -1;
@@ -110,7 +126,7 @@ public class FileManager {
         }
     }
 
-    public static void receiveFileDir(DataInputStream receive, DataOutputStream send, String path_dir) throws IOException {
+    public static Long receiveFileDir(DataInputStream receive, DataOutputStream send, String path_dir) throws IOException {
 
         int fileNameLength = receive.readInt();
 
@@ -135,7 +151,7 @@ public class FileManager {
         else if (destination.length() == fileSize) {
             send.writeChar('c');
             /* envia ao servidor que client já possui este arquivo baixado completamente */
-            return;
+            return destination.length();
         }
         send.writeChar('n'); /* autoriza sevidor a enviar arquivo */
 
@@ -152,10 +168,11 @@ public class FileManager {
                 outputStream.write(buffer, 0, bytesRead);
                 remainingBytes -= bytesRead;
             }
+            return remainingBytes == 0 ? fileSize : remainingBytes;
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-
+        return 0L;
     }
 }
 

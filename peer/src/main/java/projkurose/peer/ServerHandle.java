@@ -1,9 +1,6 @@
 package projkurose.peer;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.util.List;
 import java.util.Objects;
@@ -65,7 +62,7 @@ public class ServerHandle {
              * clientId$title;title;...title
              */
             serverGo('r', String.format("%d$%s", clientId, share.getTitle()));
-            if(this.type == 'e'){
+            if (this.type == 'e') {
                 String error = new String(this.receive.readNBytes(this.length));
                 throw new IOException(error);
             }
@@ -152,7 +149,6 @@ public class ServerHandle {
 
         int index = response.indexOf('|');
 
-
         Shared share = new Shared();
         share.setId(0L);
         share.setTitle(response.substring(0, index));
@@ -164,8 +160,12 @@ public class ServerHandle {
         FileTransferClient task = new FileTransferClient(share, response);
         this.threadPool.execute(() -> {
             taskStartedNotification(path_dir);
-            task.run();
-            taskFinishedNotification(share);
+            if (task.run()) {
+                taskFinishedNotification(share);
+            } else {
+                System.out.println("Falha em realizar o download - " + share.getTitle());
+            }
+
         });
 //        this.threadPool.execute(new FileTransferClient(id, clients, path_dir));
         return true;

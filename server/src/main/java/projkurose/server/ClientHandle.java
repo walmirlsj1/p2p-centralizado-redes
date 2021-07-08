@@ -98,7 +98,7 @@ public class ClientHandle implements Runnable {
                 } else operationReply = 'l';
 
                 break;
-            case 't': // cliente não responde a solicitação
+            case 't':
                 System.out.println("Delete client share " + clientIP);
                 deleteClientShare(data);
                 break;

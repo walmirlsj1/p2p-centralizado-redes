@@ -29,7 +29,7 @@ public class SharedDAO {
 
             shared.setId(this.getLastId());
 
-            System.out.println(shared.toString());
+//            System.out.println(shared.toString());
             return shared;
         } catch (SQLException e) {
             System.out.println("Error insert: " + e.getMessage());

@@ -2,27 +2,26 @@ package projkurose.peer;
 
 import lombok.SneakyThrows;
 import org.apache.commons.configuration2.PropertiesConfiguration;
-import org.apache.commons.mail.EmailException;
+
 import projkurose.core.CommonsMail;
 import projkurose.core.Config;
 import projkurose.core.FileManager;
 import projkurose.peer.model.Shared;
 import projkurose.peer.model.SharedDAO;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 public class FileTransferServer implements Runnable {
     private final Socket connectionSocket;
     private String clientIP;
+    private Thread email;
 
     public FileTransferServer(Socket connectionSocket) {
         this.connectionSocket = connectionSocket;
@@ -34,7 +33,7 @@ public class FileTransferServer implements Runnable {
     }
 
     private void sendMail(Shared share) {
-        String destinatario = "", destinatario_nome="";
+        String destinatario = "", destinatario_nome = "";
 
         try {
             PropertiesConfiguration config = Config.getConfiguracao();
@@ -56,9 +55,8 @@ public class FileTransferServer implements Runnable {
 
         try {
             mail.sendSimpleMail(destinatario_nome, destinatario, title, message);
-        } catch (EmailException e) {
-            e.printStackTrace();
-//            throw new RuntimeException("Falha ao enviar email!");
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao enviar email!");
         }
     }
 
@@ -91,16 +89,26 @@ public class FileTransferServer implements Runnable {
             return;
         }
 
-        this.sendMail(shared);
+        email = new Thread(() -> sendMail(shared));
+        email.start();
+
+//        this.sendMail(shared);
 
 
         String path_dir = shared.getPath();
 
-        ArrayList<String> fileList = (ArrayList<String>) FileManager.loadFileList(path_dir);
 
+        ArrayList<String> fileList = new ArrayList<>();
+
+        File file = new File(path_dir);
+        if (file.isFile()) {
+            fileList.add(file.getName());
+            path_dir = file.getParent() + File.separator;
+        } else fileList = (ArrayList<String>) FileManager.loadFileList(path_dir);
 
         envia.writeInt(fileList.size());
 
+        envia.writeLong(shared.getSize());
 
         for (String filename : fileList) {
             FileManager.sendFileDir(recebe, envia, path_dir, filename);

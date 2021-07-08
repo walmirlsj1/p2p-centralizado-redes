@@ -112,6 +112,8 @@ public class ConsoleGUI {
             }
         }
 
+        if (!File.separator.equals(path_dir.charAt(path_dir.length()-1) + "")) path_dir += File.separator;
+
         if (!client.getFromServer(id, path_dir)) System.out.println(String.format("ID: %d - não encontrado!", id));
     }
 
@@ -164,6 +166,7 @@ public class ConsoleGUI {
             } while (!file.exists());
             SharedDAO sharedDAO = new SharedDAO();
             Shared shared = sharedDAO.registerShare(title, directory);
+
             if (shared != null) {
                 client.registerShareServer(shared);
                 System.out.println("Shared enviado para cadastro...");
@@ -193,7 +196,7 @@ public class ConsoleGUI {
 
         while (id == -1L) {
             try {
-//                System.out.print("Informe o id para deletado: ");
+                System.out.print("Informe o id para deletado: ");
                 id = Long.parseLong(bfr.readLine());
 
             } catch (NumberFormatException | IOException e) {
@@ -212,7 +215,8 @@ public class ConsoleGUI {
 
     public static void ClearConsole() {
         try {
-            TimeUnit.SECONDS.sleep(2);
+            System.out.println("Processando...");
+            TimeUnit.SECONDS.sleep(1);
 
             String operatingSystem = System.getProperty("os.name"); //Check the current operating system
             if (operatingSystem.contains("Windows")) {

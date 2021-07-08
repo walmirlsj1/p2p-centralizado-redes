@@ -23,6 +23,8 @@ public class DirectoryDAO {
         try (Statement stmt = con.createStatement()) {
             stmt.execute(sql_insert);
 
+            directory.setId(this.getLastId());
+
             return directory;
         } catch (SQLException e) {
             e.getStackTrace();
