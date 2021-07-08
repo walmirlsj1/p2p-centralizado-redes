@@ -106,7 +106,7 @@ public class ClientHandle implements Runnable {
                 System.out.println("Register shareds in server: " + clientIP);
                 messageReply = "OK";
                 operation = register(data) ? 'o' : 'e';
-                System.out.println("operation " + operation + " data: " + data);
+//                System.out.println("operation " + operation + " data: " + data);
 
                 if (operation == 'e') messageReply = "Failed process request";
 
